@@ -23,11 +23,27 @@ const prettyLabel = (s) => {
  */
 export default function DateField({ value = '', onChange, min, max, placeholder = 'Select date', required, className = '', style = {} }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
   const now = new Date();
   const sel = parseISO(value);
   const [viewY, setViewY] = useState(sel ? sel.y : now.getFullYear());
   const [viewM, setViewM] = useState(sel ? sel.m : now.getMonth());
   const ref = useRef(null);
+  const btnRef = useRef(null);
+  const popRef = useRef(null);
+
+  const POP_W = 280, POP_H = 330;
+
+  function reposition() {
+    const b = btnRef.current?.getBoundingClientRect();
+    if (!b) return;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = b.left;
+    if (left + POP_W > vw - 8) left = Math.max(8, vw - POP_W - 8);
+    let top = b.bottom + 6;
+    if (top + POP_H > vh - 8 && b.top - POP_H - 6 > 8) top = b.top - POP_H - 6;
+    setPos({ top, left });
+  }
 
   useEffect(() => {
     const sp = parseISO(value);
@@ -35,9 +51,22 @@ export default function DateField({ value = '', onChange, min, max, placeholder 
   }, [value]);
 
   useEffect(() => {
-    function onDoc(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
-    if (open) document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    if (!open) return;
+    reposition();
+    function onDoc(e) {
+      if (ref.current?.contains(e.target)) return;
+      if (popRef.current?.contains(e.target)) return;
+      setOpen(false);
+    }
+    function onMove() { reposition(); }
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+    };
   }, [open]);
 
   const minP = parseISO(min); const maxP = parseISO(max);

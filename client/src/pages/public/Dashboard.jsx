@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPeriod, setFilterPeriod] = useState('all');
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   function periodRange() {
     const today = new Date();
@@ -32,24 +34,36 @@ export default function Dashboard() {
   }
 
   async function load() {
-    const range = periodRange();
-    const params = { from: range.from, to: range.to };
-    if (filterSchool) params.schoolId = filterSchool;
-    if (filterType) params.typeId = filterType;
-    if (filterStatus) params.status = filterStatus;
-    // The detailed story must use the SAME filters as the summary so the
-    // numbers (missions / task records) stay consistent across both views.
-    const logParams = { from: range.from, to: range.to };
-    if (filterSchool) logParams.schoolId = filterSchool;
-    if (filterType) logParams.typeId = filterType;
-    if (filterStatus) logParams.status = filterStatus;
-    const [d, l, s, lt] = await Promise.all([
-      api.get('/dashboard/summary', { params }),
-      api.get('/logs', { params: logParams }),
-      api.get('/schools'),
-      api.get('/log-types'),
-    ]);
-    setData(d.data); setLogs(l.data); setSchools(s.data); setLogTypes(lt.data);
+    setLoading(true); setLoadError('');
+    try {
+      const range = periodRange();
+      const params = { from: range.from, to: range.to };
+      if (filterSchool) params.schoolId = filterSchool;
+      if (filterType) params.typeId = filterType;
+      if (filterStatus) params.status = filterStatus;
+      // The detailed story must use the SAME filters as the summary so the
+      // numbers (missions / task records) stay consistent across both views.
+      const logParams = { from: range.from, to: range.to };
+      if (filterSchool) logParams.schoolId = filterSchool;
+      if (filterType) logParams.typeId = filterType;
+      if (filterStatus) logParams.status = filterStatus;
+      // Use allSettled so one failing call never freezes the whole dashboard.
+      const [d, l, s, lt] = await Promise.allSettled([
+        api.get('/dashboard/summary', { params }),
+        api.get('/logs', { params: logParams }),
+        api.get('/schools'),
+        api.get('/log-types'),
+      ]);
+      if (d.status === 'fulfilled') setData(d.value.data);
+      if (l.status === 'fulfilled') setLogs(l.value.data);
+      if (s.status === 'fulfilled') setSchools(s.value.data);
+      if (lt.status === 'fulfilled') setLogTypes(lt.value.data);
+      if (d.status === 'rejected') setLoadError('Could not load the dashboard summary. Please try Refresh.');
+    } catch (e) {
+      setLoadError('Something went wrong loading the dashboard. Please try Refresh.');
+    } finally {
+      setLoading(false);
+    }
   }
   // Reload whenever any filter changes so the date range drives the whole dashboard.
   useEffect(() => { load(); }, [from, to, filterPeriod, filterType, filterSchool, filterStatus]);
@@ -119,7 +133,7 @@ export default function Dashboard() {
                 <strong className="eyebrow" style={{ margin: 0, fontSize: '0.65rem' }}>TO</strong>
                 <DateField value={to} onChange={setTo} min={from} placeholder="To" />
               </span>
-              <button onClick={load} className="pill-btn pill-btn-primary text-sm">Refresh Live Data</button>
+              <button onClick={load} disabled={loading} className="pill-btn pill-btn-primary text-sm">{loading ? 'Refreshing…' : 'Refresh Live Data'}</button>
               <button onClick={() => window.print()} className="pill-btn text-sm">Print Story</button>
             </div>
             <div className="flex flex-wrap gap-2 mt-3">
@@ -178,11 +192,18 @@ export default function Dashboard() {
               </select>
             </label>
             <div className="flex items-end">
-              <button onClick={load} className="pill-btn pill-btn-primary text-sm w-full">Apply</button>
+              <button onClick={load} disabled={loading} className="pill-btn pill-btn-primary text-sm w-full">{loading ? 'Loading…' : 'Apply'}</button>
             </div>
           </div>
         </div>
       </section>
+
+      {loadError && (
+        <div className="glass-card p-4 fade-up" style={{ borderRadius: 16, borderColor: 'var(--danger)', background: 'rgba(199,53,53,0.06)' }}>
+          <span style={{ color: 'var(--danger)', fontWeight: 700 }}>⚠ {loadError}</span>
+          <button onClick={load} className="pill-btn text-sm ml-3">Retry</button>
+        </div>
+      )}
 
       {data && (
         <>
