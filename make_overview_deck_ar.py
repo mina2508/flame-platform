@@ -31,8 +31,8 @@ def shot(name):
 
 # section, title(ar), intro(ar), steps(ar)[], screenshot
 SLIDES = [
-    ("ترحيب", "مرحبًا بك في منصة فليم",
-     "نافذة بسيطة على خدمة فليم التعليمية — تابع قصة الخدمة وأدِر كل شيء من مكان واحد.",
+    ("ترحيب", "مرحبًا بك في منصة FLAME",
+     "نافذة بسيطة على خدمة FLAME التعليمية — تابع قصة الخدمة وأدِر كل شيء من مكان واحد.",
      ["افتح الموقع من أي جهاز.",
       "الزوّار يتصفّحون الصفحات العامة.",
       "الفريق يسجّل الدخول لإدارة البيانات."],
@@ -163,7 +163,7 @@ if os.path.exists(logo):
     try:
         s.shapes.add_picture(logo, int(SW/2 - Inches(0.65)), Inches(0.7), height=Inches(1.3))
     except Exception: pass
-txt(s, Inches(0.8), Inches(2.6), Inches(11.7), Inches(1.2), "منصة فليم", 54, (255,255,255), True, PP_ALIGN.CENTER)
+txt(s, Inches(0.8), Inches(2.6), Inches(11.7), Inches(1.2), "منصة FLAME", 54, (255,255,255), True, PP_ALIGN.CENTER)
 txt(s, Inches(0.8), Inches(3.8), Inches(11.7), Inches(0.8), "جولة مبسّطة", 28, (255,255,255), False, PP_ALIGN.CENTER)
 txt(s, Inches(0.8), Inches(5.4), Inches(11.7), Inches(0.6), "ما يمكنك مشاهدته والقيام به — خطوة بخطوة", 16, (255,224,214), False, PP_ALIGN.CENTER)
 
@@ -208,9 +208,9 @@ for section, title, intro, steps, img in SLIDES:
 
 # Closing
 s = prs.slides.add_slide(blank); bg(s, FLAME_DEEP)
-txt(s, Inches(0.8), Inches(2.9), Inches(11.7), Inches(1.0), "هذه هي منصة فليم", 46, (255,255,255), True, PP_ALIGN.CENTER)
+txt(s, Inches(0.8), Inches(2.9), Inches(11.7), Inches(1.0), "هذه هي منصة FLAME", 46, (255,255,255), True, PP_ALIGN.CENTER)
 txt(s, Inches(0.8), Inches(4.0), Inches(11.7), Inches(0.6), "بسيطة للزوّار. قويّة للفريق.", 20, (255,224,214), False, PP_ALIGN.CENTER)
-txt(s, Inches(0.8), Inches(5.6), Inches(11.7), Inches(0.5), "خدمة فليم · كنيسة القديس بولس", 14, (255,220,210), False, PP_ALIGN.CENTER)
+txt(s, Inches(0.8), Inches(5.6), Inches(11.7), Inches(0.5), "خدمة FLAME · كنيسة St. Paul", 14, (255,220,210), False, PP_ALIGN.CENTER)
 
 out = os.path.join(HERE, "FLAME_Overview_AR.pptx")
 prs.save(out)
