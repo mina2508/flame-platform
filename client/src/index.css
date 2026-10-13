@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #fffdf8;
+  --soft: #f7efe5;
+  --card: rgba(255, 255, 255, 0.88);
+  --ink: #10213a;
+  --muted: #697383;
+  --line: #eadfd2;
+  --flame: #f04a18;
+  --flame-deep: #a71914;
+  --sky: #34a9d6;
+  --leaf: #78a95a;
+  --gold: #d7a330;
+  --good: #27956a;
+  --watch: #c69621;
+  --danger: #c73535;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(circle at 12% 5%, rgba(52,169,214,0.16), transparent 28rem),
+    radial-gradient(circle at 86% 10%, rgba(240,74,24,0.14), transparent 32rem),
+    linear-gradient(180deg, #fff 0%, var(--paper) 48%, var(--soft) 100%);
+  min-height: 100vh;
+}
+
+body::before {
+  position: fixed; inset: 0; z-index: -2; pointer-events: none; content: "";
+  background-image:
+    linear-gradient(rgba(16,33,58,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16,33,58,0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, transparent, black 12%, black 84%, transparent);
+}
+
+/* Glass card base */
+.glass-card {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: 0 24px 70px rgba(16,33,58,0.12);
+  backdrop-filter: blur(14px);
+}
+
+/* Gradient bottom stripe on cards */
+.gradient-stripe::after {
+  content: ""; position: absolute; inset: auto 0 0; height: 6px;
+  background: linear-gradient(90deg, var(--flame), var(--sky), var(--leaf), var(--gold));
+  border-radius: 0 0 24px 24px;
+}
+
+/* Eyebrow label */
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--flame-deep);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Pill button */
+.pill-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--line); border-radius: 999px;
+  color: var(--ink); font-weight: 900; font-family: inherit;
+  background: #fff; cursor: pointer; text-decoration: none;
+  transition: all 0.2s ease;
+}
+.pill-btn:hover {
+  border-color: var(--sky);
+  box-shadow: 0 10px 26px rgba(52,169,214,0.16);
+  transform: translateY(-1px);
+}
+.pill-btn-primary {
+  color: #fff; border: 0;
+  background: linear-gradient(135deg, var(--flame), var(--flame-deep));
+  box-shadow: 0 14px 28px rgba(167,25,20,0.16);
+}
+.pill-btn-primary:hover {
+  box-shadow: 0 16px 32px rgba(167,25,20,0.22);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex; align-items: center;
+  min-height: 28px; padding: 0 10px;
+  border-radius: 999px; font-size: 0.74rem; font-weight: 900; white-space: nowrap;
+}
+.badge-good { color: var(--good); background: rgba(39,149,106,0.12); }
+.badge-watch { color: var(--watch); background: rgba(198,150,33,0.14); }
+.badge-danger { color: var(--danger); background: rgba(199,53,53,0.12); }
+.badge-info { color: var(--sky); background: rgba(52,169,214,0.12); }
+
+/* Progress bar */
+.progress-track { height: 10px; overflow: hidden; border-radius: 999px; background: #f0e5da; }
+.progress-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--flame), var(--sky), var(--leaf)); }
+
+/* Fade-up animation helper — add delay via style */
+.fade-up {
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards;
+}
+@keyframes fadeUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Live dot */
+.live-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--good);
+  animation: pulseDot 2s ease-in-out infinite;
+}
+@keyframes pulseDot {
+  0%,100% { box-shadow: 0 0 0 0 rgba(39,149,106,0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(39,149,106,0); }
+}
+
+/* Details markers remove */
+details summary { list-style: none; cursor: pointer; }
+details summary::-webkit-details-marker { display: none; }
+
+/* Print */
+@media print {
+  body { background: #fff; }
+  .glass-card { box-shadow: none !important; background: #fff !important; }
+}
+
+/* ─────────────── UI enhancements ─────────────── */
+
+/* Consistent, accessible focus states on all form controls */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--sky) !important;
+  box-shadow: 0 0 0 3px rgba(52, 169, 214, 0.18);
+}
+
+/* Gentle hover lift for interactive glass cards */
+.glass-card { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+
+/* Pill button active press feedback */
+.pill-btn:active { transform: translateY(1px) scale(0.99); }
+
+/* Status flag badge: neutral/expected */
+.badge-neutral { color: var(--muted); background: rgba(105, 115, 131, 0.12); }
+
+/* Smooth open for details content */
+details > *:not(summary) { animation: fadeUp 0.3s ease; }
+
+/* Table row hover for admin lists */
+tbody tr:hover { background: rgba(52, 169, 214, 0.05); }
+
+/* Section divider accent used on headings */
+.accent-bar {
+  width: 42px; height: 4px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--flame), var(--flame-deep));
+  margin: 6px 0 2px;
+}
+
+/* Nicer scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--sky); }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, details > *:not(summary) { animation: none; opacity: 1; }
+  .glass-card, .pill-btn { transition: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* ─────────────── Logo treatment (enhanced brand mark) ─────────────── */
+
+/* Hero logo: gradient ring + soft glow + gentle float */
+.flame-logo-hero {
+  position: relative;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255,255,255,0.9), rgba(255,246,240,0.6) 60%, transparent 72%),
+    conic-gradient(from 210deg, var(--flame), var(--gold), var(--flame-deep), var(--flame));
+  box-shadow:
+    0 0 0 4px rgba(255,255,255,0.65),
+    0 18px 44px rgba(167,25,20,0.28),
+    0 0 60px rgba(240,74,24,0.18);
+  animation: logoFloat 5s ease-in-out infinite;
+}
+.flame-logo-hero::before {
+  content: ""; position: absolute; inset: 6px; border-radius: 50%;
+  background: #fff;
+}
+.flame-logo-hero img { position: relative; z-index: 1; }
+
+/* Soft pulsing halo behind the hero logo */
+.flame-logo-hero::after {
+  content: ""; position: absolute; inset: -12px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,74,24,0.28), transparent 68%);
+  z-index: -1;
+  animation: logoHalo 3.2s ease-in-out infinite;
+}
+@keyframes logoFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes logoHalo { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.08); } }
+
+/* Navbar brand mark: subtle gradient ring */
+.flame-logo-nav {
+  display: grid; place-items: center;
+  border-radius: 12px; padding: 4px;
+  background: linear-gradient(135deg, rgba(240,74,24,0.14), rgba(52,169,214,0.12));
+  box-shadow: inset 0 0 0 1px rgba(240,74,24,0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.flame-logo-nav:hover { transform: rotate(-4deg) scale(1.05); box-shadow: inset 0 0 0 1px rgba(240,74,24,0.4), 0 8px 18px rgba(167,25,20,0.18); }
+
+@media (prefers-reduced-motion: reduce) {
+  .flame-logo-hero, .flame-logo-hero::after { animation: none; }
+}

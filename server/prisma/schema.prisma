@@ -1,0 +1,386 @@
+// FLAME platform database schema (Prisma).
+// SQLite by default; switch provider to "postgresql" for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Auth ───────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("reviewer") // comma-separated roles
+  createdAt    DateTime @default(now())
+  missionLogs  MissionLog[]
+}
+
+// ─────────────────────────── Geography ───────────────────────────
+model Country {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  schools     School[]
+  residences  Residence[]
+  priests     Person[]      @relation("PriestCountry")
+  missions    MissionCountry[]
+}
+
+model Residence {
+  id        String   @id @default(uuid())
+  name      String
+  city      String?
+  address   String?
+  countryId String?
+  country   Country? @relation(fields: [countryId], references: [id])
+  createdAt DateTime @default(now())
+
+  residents Person[] @relation("ResidencePersons")
+}
+
+model School {
+  id          String   @id @default(uuid())
+  name        String
+  city        String?
+  address     String?
+  phone       String?
+  email       String?
+  country     String?                     // display text
+  countryId   String?
+  countryRef  Country? @relation(fields: [countryId], references: [id])
+  region      String?
+  workingDays String   @default("1,2,3,4,5")
+  latitude    Float?
+  longitude   Float?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  people       Person[]            @relation("SchoolPeople")
+  classes      ClassLevel[]
+  missionLogs  MissionLog[]
+  activities   Activity[]
+  curriculums  CurriculumSchool[]
+  valuesClasses ValuesClassSchool[]
+  formations   FormationSchool[]
+  missionVisits MissionSchool[]
+}
+
+// ─────────────────────────── People ───────────────────────────
+// Central reusable Person. Can be principal / teacher / worker / resident /
+// priest / servant / other. Reusable across schools, residences, missions.
+model Person {
+  id           String   @id @default(uuid())
+  fullName     String                       // only required field
+  birthdate    DateTime?
+  nationality  String?                       // local | Egyptian | other-text
+  position     String?                       // Principal | Teacher | Worker | Resident | Priest | Servant | Other
+  contact      String?
+  email        String?
+  isPriest     Boolean  @default(false)
+  available    Boolean  @default(true)       // shown when selecting people for missions
+  dob          DateTime?                     // legacy birthdays support
+
+  schoolId     String?
+  school       School?    @relation("SchoolPeople", fields: [schoolId], references: [id])
+  residenceId  String?
+  residence    Residence? @relation("ResidencePersons", fields: [residenceId], references: [id])
+  priestCountryId String?
+  priestCountry   Country? @relation("PriestCountry", fields: [priestCountryId], references: [id])
+
+  createdAt    DateTime @default(now())
+
+  classesTaught ClassLevel[]   @relation("ClassTeacher")
+  missionPeople MissionPerson[]
+  missionLogs   MissionLog[]   @relation("ResponsiblePerson")
+}
+
+model ClassLevel {
+  id        String   @id @default(uuid())
+  name      String
+  stage     String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id])
+  teacherId String?
+  teacher   Person?  @relation("ClassTeacher", fields: [teacherId], references: [id])
+  createdAt DateTime @default(now())
+
+  curriculums   CurriculumClass[]
+  valuesClasses ValuesClassClass[]
+  students      Student[]
+}
+
+// A Student belongs to a Class (Class has many Students).
+model Student {
+  id            String   @id @default(uuid())
+  fullName      String                       // only required field
+  birthday      DateTime?
+  phone         String?
+  fatherName    String?
+  fatherContact String?
+  motherName    String?
+  motherContact String?
+  classId       String?
+  classLevel    ClassLevel? @relation(fields: [classId], references: [id])
+  createdAt     DateTime @default(now())
+}
+
+// Medical team member — basic data + availability; selectable in medical missions.
+model MedicalTeamMember {
+  id          String   @id @default(uuid())
+  fullName    String                        // only required field
+  specialty   String?
+  contact     String?
+  email       String?
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  missions    MissionMedical[]
+}
+model MissionMedical {
+  missionId String
+  memberId  String
+  mission   Mission           @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  member    MedicalTeamMember @relation(fields: [memberId], references: [id])
+  @@id([missionId, memberId])
+}
+
+// ─────────────────────────── Curriculum (PDF, multi-assign) ───────────────────────────
+model Curriculum {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  language    String?  // ar | en | fr
+  fileUrl     String?  // uploaded PDF path (max 12MB)
+  createdAt   DateTime @default(now())
+
+  classes CurriculumClass[]
+  schools CurriculumSchool[]
+}
+model CurriculumClass {
+  curriculumId String
+  classId      String
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  classLevel   ClassLevel @relation(fields: [classId], references: [id], onDelete: Cascade)
+  @@id([curriculumId, classId])
+}
+model CurriculumSchool {
+  curriculumId String
+  schoolId     String
+  status       String     @default("expected") // expected | pending | completed
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  school       School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@id([curriculumId, schoolId])
+}
+
+// ─────────────────────────── Values Classes (same logic as Curriculum) ───────────────────────────
+model ValuesClass {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  language    String?
+  fileUrl     String?  // PDF max 12MB
+  createdAt   DateTime @default(now())
+
+  classes ValuesClassClass[]
+  schools ValuesClassSchool[]
+}
+model ValuesClassClass {
+  valuesClassId String
+  classId       String
+  valuesClass   ValuesClass @relation(fields: [valuesClassId], references: [id], onDelete: Cascade)
+  classLevel    ClassLevel  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  @@id([valuesClassId, classId])
+}
+model ValuesClassSchool {
+  valuesClassId String
+  schoolId      String
+  status        String      @default("expected") // expected | pending | completed
+  valuesClass   ValuesClass @relation(fields: [valuesClassId], references: [id], onDelete: Cascade)
+  school        School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@id([valuesClassId, schoolId])
+}
+
+// ─────────────────────────── Formation (files, multi-school) ───────────────────────────
+model Formation {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+
+  schools FormationSchool[]
+}
+model FormationSchool {
+  formationId String
+  schoolId    String
+  status      String    @default("expected") // expected | pending | completed
+  formation   Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  @@id([formationId, schoolId])
+}
+
+// ─────────────────────────── Missions ───────────────────────────
+// A mission is Medical or Other. Linked to one or more countries, each with
+// its own start/end date. Within a country, specific schools can be visited.
+model Mission {
+  id          String   @id @default(uuid())
+  title       String
+  type        String   @default("other")   // medical | other
+  status      String   @default("expected") // expected (not started) | pending (in progress) | completed
+  startDate   DateTime?
+  endDate     DateTime?
+  summary     String?
+  numPeople   Int?
+  durationDays Int?
+  anonymousCount Int    @default(0)
+  createdAt   DateTime @default(now())
+
+  countries MissionCountry[]
+  schools   MissionSchool[]
+  people    MissionPerson[]
+  medicalTeam MissionMedical[]
+}
+model MissionCountry {
+  id        String   @id @default(uuid())
+  missionId String
+  countryId String
+  startDate DateTime?
+  endDate   DateTime?
+  mission   Mission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  country   Country  @relation(fields: [countryId], references: [id])
+}
+model MissionSchool {
+  missionId String
+  schoolId  String
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  school    School  @relation(fields: [schoolId], references: [id])
+  @@id([missionId, schoolId])
+}
+model MissionPerson {
+  missionId String
+  personId  String
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  person    Person  @relation(fields: [personId], references: [id])
+  @@id([missionId, personId])
+}
+
+// ─────────────────────────── Morning Assembly ───────────────────────────
+// Each section is text OR an uploaded file.
+model MorningAssembly {
+  id            String   @id @default(uuid())
+  schoolId      String?
+  date          DateTime?
+  openingPrayer String?  // text
+  openingPrayerFile String?
+  physicalExercise String?
+  physicalExerciseFile String?
+  radio         String?
+  radioFile     String?
+  nationalAnthem String?
+  nationalAnthemFile String?
+  inspection    String?
+  inspectionFile String?
+  announcement  String?
+  announcementFile String?
+  createdAt     DateTime @default(now())
+}
+
+// ─────────────────────────── Mission Logs (dashboard) ───────────────────────────
+model LogType {
+  id                     String  @id
+  key                    String  @unique
+  label                  String
+  icon                   String?
+  expectedPerWorkingDay  Int     @default(0)
+  missionLogs MissionLog[]
+}
+
+model MissionLog {
+  id                   String   @id @default(uuid())
+  logTypeId            String
+  logType              LogType  @relation(fields: [logTypeId], references: [id])
+  schoolId             String
+  school               School   @relation(fields: [schoolId], references: [id])
+  responsiblePersonId  String?
+  responsiblePerson    Person?  @relation("ResponsiblePerson", fields: [responsiblePersonId], references: [id])
+  logDate              DateTime
+  status               String   @default("pending")
+  notes                String?
+  createdById          String?
+  createdBy            User?    @relation(fields: [createdById], references: [id])
+  createdAt            DateTime @default(now())
+  tasks TaskRecord[]
+}
+
+model TaskRecord {
+  id            String     @id @default(uuid())
+  missionLogId  String
+  missionLog    MissionLog @relation(fields: [missionLogId], references: [id], onDelete: Cascade)
+  question      String
+  performed     Boolean    @default(false)
+  responsible   String?
+  recordedDate  DateTime?
+}
+
+// ─────────────────────────── Content ───────────────────────────
+model Activity {
+  id           String   @id @default(uuid())
+  caption      String?
+  activityDate DateTime?
+  scope        String   @default("school")  // school | local_flame | other
+  summary      String?
+  schoolId     String?
+  school       School?  @relation(fields: [schoolId], references: [id])
+  imageUrl     String?
+  localPath    String?
+  createdAt    DateTime @default(now())
+}
+
+model NewsPost {
+  id        String   @id @default(uuid())
+  title     String
+  body      String?
+  postDate  DateTime?
+  imageUrl  String?
+  localPath String?
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────── Dynamic application form ───────────────────────────
+model FormField {
+  id        String   @id @default(uuid())
+  label     String
+  key       String   @unique
+  type      String   @default("text")   // text | number | dropdown | toggle | rating
+  options   String?
+  required  Boolean  @default(false)
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+model Application {
+  id          String   @id @default(uuid())
+  values      String   @default("{}")
+  submittedAt DateTime @default(now())
+}
+
+// ─────────────────────────── Misc reference ───────────────────────────
+model MiscEntry {
+  id        String   @id @default(uuid())
+  category  String
+  label     String
+  value     String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
