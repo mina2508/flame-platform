@@ -25,7 +25,10 @@ import { errorHandler } from './middleware/error.js';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+// Allow the deployed client origin(s). Set CORS_ORIGIN to a comma-separated list
+// (e.g. https://flame-web.onrender.com). Defaults to "*" for easy setup.
+const origins = (process.env.CORS_ORIGIN || '*').split(',').map(o => o.trim());
+app.use(cors({ origin: origins.includes('*') ? true : origins }));
 app.use(express.json());
 
 // Serve locally-stored images
