@@ -64,4 +64,5 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 app.use(errorHandler);
 
-app.listen(PORT, () => console.log(`FLAME API running on http://localhost:${PORT}`));
+// Bind to 0.0.0.0 so cloud hosts (Koyeb, Fly, Render, etc.) can route to it.
+app.listen(PORT, '0.0.0.0', () => console.log(`FLAME API running on port ${PORT}`));
