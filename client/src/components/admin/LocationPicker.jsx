@@ -80,9 +80,23 @@ export default function LocationPicker({ value, onChange, nameHint = '', cityHin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nameHint, cityHint, countryHint]);
 
+  // Guess a display language from the query's script so results read naturally,
+  // while still letting Nominatim match place names in ANY language.
+  function langForQuery(q) {
+    if (/[\u0600-\u06FF]/.test(q)) return 'ar';           // Arabic
+    if (/[\u0400-\u04FF]/.test(q)) return 'ru';           // Cyrillic
+    if (/[\u4E00-\u9FFF]/.test(q)) return 'zh';           // Chinese
+    if (/[\u0370-\u03FF]/.test(q)) return 'el';           // Greek
+    if (/[\u0590-\u05FF]/.test(q)) return 'he';           // Hebrew
+    return 'en';
+  }
+
   async function nominatim(q) {
     const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=' + encodeURIComponent(q);
-    const r = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    // Prefer the query's language first, then fall back to English/local names.
+    const lang = langForQuery(q);
+    const accept = lang === 'en' ? 'en' : `${lang},en;q=0.8`;
+    const r = await fetch(url, { headers: { 'Accept-Language': accept } });
     return r.ok ? r.json() : [];
   }
 
@@ -137,8 +151,10 @@ export default function LocationPicker({ value, onChange, nameHint = '', cityHin
   useEffect(() => {
     if (!hasPin) { setCurrentAddr(''); return; }
     let cancelled = false;
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-    fetch(url, { headers: { 'Accept-Language': 'en' } })
+    const lang = langForQuery(query || '');
+    const accept = lang === 'en' ? 'en' : `${lang},en;q=0.8`;
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=${lang}&lat=${lat}&lon=${lng}`;
+    fetch(url, { headers: { 'Accept-Language': accept } })
       .then(r => (r.ok ? r.json() : null))
       .then(d => { if (!cancelled && d) setCurrentAddr(d.display_name || ''); })
       .catch(() => {});
@@ -165,7 +181,8 @@ export default function LocationPicker({ value, onChange, nameHint = '', cityHin
             value={query}
             onChange={e => onType(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } }}
-            placeholder="Search place, city or country (e.g. 'Accra, Ghana')"
+            placeholder="Search in any language — e.g. 'Accra, Ghana' or 'القاهرة، مصر'"
+            dir="auto"
             className="border rounded-xl px-3 py-2 text-sm flex-1"
             style={{ borderColor: 'var(--line)' }}
           />
