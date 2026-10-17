@@ -8,17 +8,38 @@ export default function CrudSection({ title, endpoint, fields }) {
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({});
 
+  const [busy, setBusy] = useState(false);
+
   async function load() { setItems((await api.get(endpoint)).data); }
   useEffect(() => { load(); }, []);
 
   async function add(e) {
     e.preventDefault();
-    await api.post(endpoint, form);
-    setForm({}); load();
+    if (busy) return;
+    setBusy(true);
+    try {
+      // Use the created record from the response to update the list instantly
+      // (no second round-trip), so new rows appear immediately.
+      const { data: created } = await api.post(endpoint, form);
+      if (created && created.id) {
+        setItems(prev => [...prev, created]);
+      } else {
+        await load();
+      }
+      setForm({});
+    } finally {
+      setBusy(false);
+    }
   }
   async function remove(id) {
     if (!confirm('Delete this item?')) return;
-    await api.delete(`${endpoint}/${id}`); load();
+    const prev = items;
+    setItems(items.filter(it => it.id !== id)); // optimistic
+    try {
+      await api.delete(`${endpoint}/${id}`);
+    } catch {
+      setItems(prev); // revert on failure
+    }
   }
   function startEdit(item) {
     setEditId(item.id);
@@ -27,8 +48,19 @@ export default function CrudSection({ title, endpoint, fields }) {
     setEditForm(seed);
   }
   async function saveEdit(id) {
-    await api.patch(`${endpoint}/${id}`, editForm);
-    setEditId(null); load();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { data: updated } = await api.patch(`${endpoint}/${id}`, editForm);
+      if (updated && updated.id) {
+        setItems(prev => prev.map(it => (it.id === id ? { ...it, ...updated } : it)));
+      } else {
+        await load();
+      }
+      setEditId(null);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -46,7 +78,7 @@ export default function CrudSection({ title, endpoint, fields }) {
                 onChange={e => setForm({ ...form, [f.key]: e.target.value })}
                 className="border rounded-xl px-3 py-2 text-sm flex-1 min-w-[120px]" style={{ borderColor: 'var(--line)' }} />
             ))}
-            <button className="pill-btn pill-btn-primary text-sm">+ Add</button>
+            <button disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add'}</button>
           </form>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

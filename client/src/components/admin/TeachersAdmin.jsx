@@ -32,20 +32,45 @@ export default function TeachersAdmin() {
     setClasses(sid ? (await api.get(`/classes?schoolId=${sid}`)).data : []);
   }
 
+  const [busy, setBusy] = useState(false);
+
   async function add(e) {
     e.preventDefault();
-    const { data } = await api.post('/people', {
-      fullName: f.fullName, birthdate: f.birthdate || null, position: 'Teacher',
-      nationality: f.nationality, contact: f.contact, email: f.email, schoolId: f.schoolId || null,
-    });
-    // assign as class teacher if a class was chosen
-    if (f.classId) await api.patch(`/classes/${f.classId}`, { teacherId: data.id });
-    setF({ fullName: '', birthdate: '', nationality: '', contact: '', email: '', schoolId: '', classId: '' });
-    // Clear filters so the new teacher is always visible, then refresh the list.
-    setFCountry(''); setFSchool('');
-    await loadTeachers('', '');
+    if (busy) return;
+    setBusy(true);
+    try {
+      const chosenSchool = schools.find(s => s.id === f.schoolId);
+      const chosenClass = classes.find(c => c.id === f.classId);
+      const { data } = await api.post('/people', {
+        fullName: f.fullName, birthdate: f.birthdate || null, position: 'Teacher',
+        nationality: f.nationality, contact: f.contact, email: f.email, schoolId: f.schoolId || null,
+      });
+      // assign as class teacher if a class was chosen
+      if (f.classId) await api.patch(`/classes/${f.classId}`, { teacherId: data.id });
+
+      // Optimistically show the new teacher immediately (clear filters so it's visible).
+      const optimistic = {
+        ...data,
+        school: chosenSchool ? { name: chosenSchool.name, countryRef: null } : null,
+        classesTaught: chosenClass ? [{ name: chosenClass.name }] : [],
+      };
+      setFCountry(''); setFSchool('');
+      setTeachers(prev => [optimistic, ...prev.filter(t => t.id !== data.id)]);
+      setF({ fullName: '', birthdate: '', nationality: '', contact: '', email: '', schoolId: '', classId: '' });
+
+      // Reconcile with the server (fills in nested relations) without blocking the UI.
+      loadTeachers('', '');
+    } finally {
+      setBusy(false);
+    }
   }
-  async function remove(id) { if (confirm('Delete teacher?')) { await api.delete(`/people/${id}`); loadTeachers(); } }
+  async function remove(id) {
+    if (!confirm('Delete teacher?')) return;
+    const prev = teachers;
+    setTeachers(teachers.filter(t => t.id !== id)); // optimistic
+    try { await api.delete(`/people/${id}`); }
+    catch { setTeachers(prev); }
+  }
 
   const [editId, setEditId] = useState(null);
   const [editF, setEditF] = useState({});
@@ -54,8 +79,11 @@ export default function TeachersAdmin() {
     setEditF({ fullName: t.fullName || '', birthdate: t.birthdate ? t.birthdate.slice(0,10) : '', nationality: t.nationality || '', contact: t.contact || '', email: t.email || '', schoolId: t.schoolId || '' });
   }
   async function saveEdit(id) {
-    await api.patch(`/people/${id}`, { ...editF, birthdate: editF.birthdate || null, schoolId: editF.schoolId || null });
-    setEditId(null); loadTeachers();
+    const { data } = await api.patch(`/people/${id}`, { ...editF, birthdate: editF.birthdate || null, schoolId: editF.schoolId || null });
+    // Merge the updated fields in place so the change shows instantly.
+    setTeachers(prev => prev.map(t => (t.id === id ? { ...t, ...data } : t)));
+    setEditId(null);
+    loadTeachers(); // background reconcile for nested relations
   }
 
   const inp = "border rounded-xl px-3 py-2 text-sm";
@@ -89,7 +117,7 @@ export default function TeachersAdmin() {
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Add Teacher</button>
+        <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add Teacher'}</button>
       </form>
 
       {/* Filters */}
