@@ -38,6 +38,9 @@ function GroupHeader({ group }) {
 
 export default function DatabaseAdmin() {
   const [showGuide, setShowGuide] = useState(true);
+  // Accordion: only one section open at a time across the whole tab.
+  const [openId, setOpenId] = useState(null);
+  const sec = (id) => ({ open: openId === id, onToggle: () => setOpenId(cur => (cur === id ? null : id)) });
 
   return (
     <div className="space-y-5">
@@ -70,29 +73,29 @@ export default function DatabaseAdmin() {
 
       {/* 1 — Locations & Structure */}
       <GroupHeader group={GROUPS[0]} />
-      <CrudSection title="🌍 Countries" endpoint="/countries" fields={[
+      <CrudSection title="🌍 Countries" endpoint="/countries" {...sec('countries')} fields={[
         { key: 'name', label: 'Name' },
         { key: 'code', label: 'Code (GH/BI/GA)' },
       ]} />
-      <ResidenceManager />
-      <SchoolManager />
+      <ResidenceManager {...sec('residences')} />
+      <SchoolManager {...sec('schools')} />
 
       {/* 2 — People */}
       <GroupHeader group={GROUPS[1]} />
-      <Collapsible title="👩‍🏫 Teachers" countEndpoint="/people?type=Teacher"><TeachersAdmin /></Collapsible>
-      <Collapsible title="🎒 Students" countEndpoint="/students"><StudentsAdmin /></Collapsible>
-      <Collapsible title="⛪ Priests" countEndpoint="/people?isPriest=true"><PriestsAdmin /></Collapsible>
-      <Collapsible title="🙏 FLAME Servants" countEndpoint="/people?type=Servant"><ServantsAdmin /></Collapsible>
-      <Collapsible title="🏥 Medical Team" countEndpoint="/medical-team"><MedicalTeamAdmin /></Collapsible>
+      <Collapsible title="👩‍🏫 Teachers" countEndpoint="/people?type=Teacher" {...sec('teachers')}><TeachersAdmin /></Collapsible>
+      <Collapsible title="🎒 Students" countEndpoint="/students" {...sec('students')}><StudentsAdmin /></Collapsible>
+      <Collapsible title="⛪ Priests" countEndpoint="/people?isPriest=true" {...sec('priests')}><PriestsAdmin /></Collapsible>
+      <Collapsible title="🙏 FLAME Servants" countEndpoint="/people?type=Servant" {...sec('servants')}><ServantsAdmin /></Collapsible>
+      <Collapsible title="🏥 Medical Team" countEndpoint="/medical-team" {...sec('medical')}><MedicalTeamAdmin /></Collapsible>
 
       {/* 3 — Learning Content */}
       <GroupHeader group={GROUPS[2]} />
-      <Collapsible title="📚 Curriculum, Values & Formation"><DocumentsAdmin /></Collapsible>
-      <Collapsible title="☀ Morning Assembly" countEndpoint="/morning-assembly"><MorningAssemblyAdmin /></Collapsible>
+      <Collapsible title="📚 Curriculum, Values & Formation" {...sec('docs')}><DocumentsAdmin /></Collapsible>
+      <Collapsible title="☀ Morning Assembly" countEndpoint="/morning-assembly" {...sec('assembly')}><MorningAssemblyAdmin /></Collapsible>
 
       {/* 4 — Other */}
       <GroupHeader group={GROUPS[3]} />
-      <CrudSection title="⚙️ Miscellaneous" endpoint="/misc" fields={[
+      <CrudSection title="⚙️ Miscellaneous" endpoint="/misc" {...sec('misc')} fields={[
         { key: 'category', label: 'Category' },
         { key: 'label', label: 'Label' },
         { key: 'value', label: 'Value' },

@@ -26,8 +26,8 @@ export default function Modal({ open, onClose, title, subtitle, children, maxWid
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="modal-card glass-card"
-        style={{ maxWidth }}
+        className="modal-card"
+        style={{ maxWidth, border: '1px solid var(--line)', boxShadow: '0 24px 70px rgba(16,33,58,0.18)' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="modal-header">

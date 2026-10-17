@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import Modal from './Modal.jsx';
 
-export default function CrudSection({ title, endpoint, fields }) {
+export default function CrudSection({ title, endpoint, fields, open: openProp, onToggle }) {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({});
-  const [show, setShow] = useState(false);
+  const [showState, setShowState] = useState(false);
+  const isControlled = openProp !== undefined;
+  const show = isControlled ? openProp : showState;
+  const toggleShow = () => { if (isControlled) onToggle?.(); else setShowState(s => !s); };
   const [addOpen, setAddOpen] = useState(false);
   const [editId, setEditId] = useState(null);   // id being edited (opens edit modal)
   const [editForm, setEditForm] = useState({});
@@ -63,7 +66,7 @@ export default function CrudSection({ title, endpoint, fields }) {
   return (
     <div className="glass-card p-4 fade-up" style={{ borderRadius: 18 }}>
       <div className="flex justify-between items-center gap-2">
-        <button onClick={() => setShow(!show)} className="text-left font-serif text-lg text-ink flex items-center gap-2 flex-1"
+        <button onClick={toggleShow} className="text-left font-serif text-lg text-ink flex items-center gap-2 flex-1"
           style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <span>{title}</span>
           <span className="text-sm" style={{ color: 'var(--muted)' }}>{items.length} items {show ? '▲' : '▼'}</span>

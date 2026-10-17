@@ -2,9 +2,14 @@ import { useState, useEffect } from 'react';
 import { api } from '../../api/client.js';
 
 // Collapsible section wrapper matching the CrudSection look.
-// Pass `count` directly, or `countEndpoint` to fetch the item count automatically.
-export default function Collapsible({ title, count, countEndpoint, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
+// - Uncontrolled by default (manages its own open state).
+// - Controlled when `open` + `onToggle` are provided — lets the parent enforce
+//   accordion behaviour (only one section open at a time).
+export default function Collapsible({ title, count, countEndpoint, children, defaultOpen = false, open: openProp, onToggle }) {
+  const isControlled = openProp !== undefined;
+  const [openState, setOpenState] = useState(defaultOpen);
+  const open = isControlled ? openProp : openState;
+
   const [fetchedCount, setFetchedCount] = useState(null);
 
   useEffect(() => {
@@ -18,9 +23,14 @@ export default function Collapsible({ title, count, countEndpoint, children, def
 
   const shown = count != null ? count : fetchedCount;
 
+  function toggle() {
+    if (isControlled) onToggle?.();
+    else setOpenState(o => !o);
+  }
+
   return (
     <div className="glass-card p-4 fade-up" style={{ borderRadius: 18 }}>
-      <button onClick={() => setOpen(!open)}
+      <button onClick={toggle}
         className="w-full text-left font-serif text-lg text-ink flex justify-between items-center"
         style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
         <span>{title}</span>

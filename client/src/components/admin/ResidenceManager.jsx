@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import Modal from './Modal.jsx';
 
-export default function ResidenceManager() {
+export default function ResidenceManager({ open: openProp, onToggle }) {
   const [items, setItems] = useState([]);
   const [countries, setCountries] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : openState;
+  const toggleOpen = () => { if (isControlled) onToggle?.(); else setOpenState(o => !o); };
   const [addOpen, setAddOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: '', city: '', address: '', countryId: '' });
@@ -44,7 +47,7 @@ export default function ResidenceManager() {
   return (
     <div className="glass-card p-4 fade-up" style={{ borderRadius: 18 }}>
       <div className="flex justify-between items-center gap-2">
-        <button onClick={() => setOpen(!open)} className="text-left font-serif text-lg text-ink flex items-center gap-2 flex-1" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button onClick={toggleOpen} className="text-left font-serif text-lg text-ink flex items-center gap-2 flex-1" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <span>Residences</span>
           <span className="text-sm" style={{ color: 'var(--muted)' }}>{items.length} items {open ? '▲' : '▼'}</span>
         </button>

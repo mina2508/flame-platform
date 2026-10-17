@@ -5,10 +5,13 @@ import DateField from '../DateField.jsx';
 import LocationPicker from './LocationPicker.jsx';
 import Modal from './Modal.jsx';
 
-export default function SchoolManager() {
+export default function SchoolManager({ open: openProp, onToggle }) {
   const [schools, setSchools] = useState([]);
   const [countries, setCountries] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : openState;
+  const toggleOpen = () => { if (isControlled) onToggle?.(); else setOpenState(o => !o); };
   const [addOpen, setAddOpen] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [form, setForm] = useState({ name: '', city: '', address: '', phone: '', email: '', countryId: '', latitude: null, longitude: null });
@@ -49,7 +52,7 @@ export default function SchoolManager() {
   return (
     <div className="glass-card p-4 fade-up" style={{ borderRadius: 18 }}>
       <div className="flex justify-between items-center gap-2">
-        <button onClick={() => setOpen(!open)} className="text-left font-serif text-lg text-ink flex items-center gap-2 flex-1" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button onClick={toggleOpen} className="text-left font-serif text-lg text-ink flex items-center gap-2 flex-1" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <span>Schools</span>
           <span className="text-sm" style={{ color: 'var(--muted)' }}>{schools.length} items {open ? '▲' : '▼'}</span>
         </button>
