@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import PersonPicker from './PersonPicker.jsx';
 import DateField from '../DateField.jsx';
+import LocationPicker from './LocationPicker.jsx';
 
 export default function SchoolManager() {
   const [schools, setSchools] = useState([]);
   const [countries, setCountries] = useState([]);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(null);
-  const [form, setForm] = useState({ name: '', city: '', address: '', phone: '', email: '', countryId: '' });
+  const [form, setForm] = useState({ name: '', city: '', address: '', phone: '', email: '', countryId: '', latitude: null, longitude: null });
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     setSchools((await api.get('/schools')).data);
@@ -18,11 +20,24 @@ export default function SchoolManager() {
 
   async function addSchool(e) {
     e.preventDefault();
-    await api.post('/schools', form);
-    setForm({ name: '', city: '', address: '', phone: '', email: '', countryId: '' });
-    load();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post('/schools', form);
+      setSchools(prev => [...prev, data]);
+      setForm({ name: '', city: '', address: '', phone: '', email: '', countryId: '', latitude: null, longitude: null });
+      load(); // background reconcile (brings nested relations / classes)
+    } finally {
+      setBusy(false);
+    }
   }
-  async function removeSchool(id) { if (confirm('Delete school?')) { await api.delete(`/schools/${id}`); load(); } }
+  async function removeSchool(id) {
+    if (!confirm('Delete school?')) return;
+    const prev = schools;
+    setSchools(schools.filter(s => s.id !== id));
+    try { await api.delete(`/schools/${id}`); }
+    catch { setSchools(prev); }
+  }
 
   const [fCountry, setFCountry] = useState('');
   const filteredSchools = fCountry ? schools.filter(s => s.countryId === fCountry) : schools;
@@ -54,7 +69,14 @@ export default function SchoolManager() {
               <input placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
               <input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
             </div>
-            <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Add School</button>
+            <LocationPicker
+              value={{ latitude: form.latitude, longitude: form.longitude }}
+              onChange={(lat, lng) => setForm({ ...form, latitude: lat, longitude: lng })}
+              nameHint={form.name}
+              cityHint={form.city}
+              countryHint={countries.find(c => c.id === form.countryId)?.name || ''}
+            />
+            <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add School'}</button>
           </form>
 
           {/* Filter */}
@@ -72,7 +94,11 @@ export default function SchoolManager() {
               <div className="flex items-center justify-between p-3">
                 <button onClick={() => setExpanded(expanded === s.id ? null : s.id)} className="text-left flex-1" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                   <strong className="text-ink">{s.name}</strong>
-                  <span className="text-xs ml-2" style={{ color: 'var(--muted)' }}>{s.city} · {s.classes?.length || 0} classes {expanded === s.id ? '▲' : '▼'}</span>
+                  <span className="text-xs ml-2" style={{ color: 'var(--muted)' }}>
+                    {s.city} · {s.classes?.length || 0} classes
+                    {s.latitude != null && s.longitude != null ? ' · 📍 located' : ' · 📍 no location'}
+                    {' '}{expanded === s.id ? '▲' : '▼'}
+                  </span>
                 </button>
                 <button onClick={() => removeSchool(s.id)} className="text-xs font-bold" style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
               </div>
