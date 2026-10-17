@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
-import Modal from './Modal.jsx';
 
 export default function MedicalTeamAdmin() {
-  const [addOpen, setAddOpen] = useState(false);
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState({ fullName: '', specialty: '', contact: '', email: '' });
 
@@ -20,7 +18,6 @@ export default function MedicalTeamAdmin() {
       const { data } = await api.post('/medical-team', form);
       setMembers(prev => [...prev.filter(m => m.id !== data.id), data]);
       setForm({ fullName: '', specialty: '', contact: '', email: '' });
-      setAddOpen(false);
     } finally {
       setBusy(false);
     }
@@ -54,23 +51,15 @@ export default function MedicalTeamAdmin() {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <p className="text-sm" style={{ color: 'var(--muted)' }}>Manage medical team members. Toggle availability — shown when selecting for missions.</p>
-        <button onClick={() => { setForm({ fullName: '', specialty: '', contact: '', email: '' }); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add Member</button>
-      </div>
+      <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>Manage medical team members. Toggle availability — shown when selecting for missions.</p>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Medical Team Member" subtitle="New person">
-        <form onSubmit={add} className="space-y-3">
-          <input placeholder="Full name *" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} required />
-          <input placeholder="Specialty" value={form.specialty} onChange={e => setForm({ ...form, specialty: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
-          <input placeholder="Contact" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
-          <input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
-          <div className="flex gap-2 justify-end pt-1">
-            <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
-            <button type="submit" disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Add Member'}</button>
-          </div>
-        </form>
-      </Modal>
+      <form onSubmit={add} className="flex gap-2 flex-wrap mb-4 p-3 rounded-xl" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
+        <input placeholder="Full name *" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} required />
+        <input placeholder="Specialty" value={form.specialty} onChange={e => setForm({ ...form, specialty: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
+        <input placeholder="Contact" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
+        <input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
+        <button disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add'}</button>
+      </form>
 
       <div className="space-y-2">
         {members.map(m => (

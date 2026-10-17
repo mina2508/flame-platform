@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import DateField from '../DateField.jsx';
-import Modal from './Modal.jsx';
 
 const SECTIONS = [
   { key: 'openingPrayer', label: 'Opening Prayer' },
@@ -18,7 +17,6 @@ export default function MorningAssemblyAdmin() {
   const [form, setForm] = useState({ schoolId: '', date: '' });
   const [texts, setTexts] = useState({});
   const [files, setFiles] = useState({});
-  const [addOpen, setAddOpen] = useState(false);
 
   async function load() {
     setItems((await api.get('/morning-assembly')).data);
@@ -41,7 +39,6 @@ export default function MorningAssemblyAdmin() {
     });
     await api.post('/morning-assembly', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
     setForm({ schoolId: '', date: '' }); setTexts({}); setFiles({});
-    setAddOpen(false);
     load();
   }
   async function remove(id) { if (confirm('Delete?')) { await api.delete(`/morning-assembly/${id}`); load(); } }
@@ -51,15 +48,11 @@ export default function MorningAssemblyAdmin() {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <p className="text-sm" style={{ color: 'var(--muted)' }}>
-          Each section accepts text OR a file (≤2MB). Select a school and date, fill the sections, and submit.
-        </p>
-        <button onClick={() => { setForm({ schoolId: '', date: '' }); setTexts({}); setFiles({}); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add New</button>
-      </div>
+      <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
+        Each section accepts text OR a file (≤2MB). Select a school and date, fill the sections, and submit.
+      </p>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Create Morning Assembly" subtitle="New entry" maxWidth={620}>
-      <form onSubmit={submit} className="space-y-3">
+      <form onSubmit={submit} className="grid gap-3 p-4 rounded-2xl mb-4" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
         <div className="flex gap-2 flex-wrap">
           <select value={form.schoolId} onChange={e => setForm({ ...form, schoolId: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} required>
             <option value="">School * ...</option>
@@ -82,12 +75,8 @@ export default function MorningAssemblyAdmin() {
           </div>
         ))}
 
-        <div className="flex gap-2 justify-end pt-1">
-          <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
-          <button type="submit" className="pill-btn pill-btn-primary text-sm">Create Assembly</button>
-        </div>
+        <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Create Morning Assembly</button>
       </form>
-      </Modal>
 
       <div className="space-y-2">
         {items.map(a => (

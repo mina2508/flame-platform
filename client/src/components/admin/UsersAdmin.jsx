@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
-import Modal from './Modal.jsx';
 
 const ROLES = ['admin', 'content_editor', 'reviewer', 'form_manager'];
 const ROLE_LABELS = {
@@ -12,7 +11,6 @@ const ROLE_LABELS = {
 
 export default function UsersAdmin() {
   const [users, setUsers] = useState([]);
-  const [addOpen, setAddOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', roles: ['reviewer'] });
 
@@ -35,7 +33,6 @@ export default function UsersAdmin() {
       const { data } = await api.post('/users', form);
       if (data && data.id) setUsers(prev => [...prev, data]); else load();
       setForm({ name: '', email: '', password: '', roles: ['reviewer'] });
-      setAddOpen(false);
     } catch (err) { alert(err.response?.data?.error || 'Failed'); }
     finally { setBusy(false); }
   }
@@ -53,39 +50,28 @@ export default function UsersAdmin() {
 
   return (
     <div className="glass-card p-5 fade-up" style={{ borderRadius: 18 }}>
-      <div className="flex justify-between items-start gap-2 mb-4">
-        <div>
-          <h2 className="font-serif text-lg text-ink mb-1">Users & Roles</h2>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>A user can hold multiple roles. Only admins can manage users.</p>
-        </div>
-        <button onClick={() => { setForm({ name: '', email: '', password: '', roles: ['reviewer'] }); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add New</button>
-      </div>
+      <h2 className="font-serif text-lg text-ink mb-1">Users & Roles</h2>
+      <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>A user can hold multiple roles. Only admins can manage users.</p>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add User" subtitle="New account">
-        <form onSubmit={add} className="space-y-3">
-          <input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="border rounded-xl px-3 py-2 text-sm w-full" style={{ borderColor: 'var(--line)' }} required />
-          <input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="border rounded-xl px-3 py-2 text-sm w-full" style={{ borderColor: 'var(--line)' }} required />
-          <input placeholder="Password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="border rounded-xl px-3 py-2 text-sm w-full" style={{ borderColor: 'var(--line)' }} required />
-          <div>
-            <span className="text-xs font-black uppercase block mb-2" style={{ color: 'var(--muted)' }}>Roles</span>
-            <div className="flex flex-wrap gap-2">
-              {ROLES.map(r => (
-                <button key={r} type="button" onClick={() => toggleRole(r)}
-                  className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
-                  style={form.roles.includes(r)
-                    ? { background: 'linear-gradient(135deg, var(--flame), var(--flame-deep))', color: '#fff', border: 'none', cursor: 'pointer' }
-                    : { background: '#fff', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer' }}>
-                  {form.roles.includes(r) ? '✓ ' : ''}{ROLE_LABELS[r]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end pt-1">
-            <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
-            <button type="submit" disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Add User'}</button>
-          </div>
-        </form>
-      </Modal>
+      <form onSubmit={add} className="p-4 rounded-2xl mb-4 space-y-3" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
+        <div className="flex gap-2 flex-wrap">
+          <input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} required />
+          <input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} required />
+          <input placeholder="Password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} required />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {ROLES.map(r => (
+            <button key={r} type="button" onClick={() => toggleRole(r)}
+              className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+              style={form.roles.includes(r)
+                ? { background: 'linear-gradient(135deg, var(--flame), var(--flame-deep))', color: '#fff', border: 'none', cursor: 'pointer' }
+                : { background: '#fff', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer' }}>
+              {form.roles.includes(r) ? '✓ ' : ''}{ROLE_LABELS[r]}
+            </button>
+          ))}
+        </div>
+        <button disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add User'}</button>
+      </form>
 
       <div className="space-y-2">
         {users.map(u => (

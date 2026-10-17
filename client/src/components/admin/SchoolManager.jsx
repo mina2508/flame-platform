@@ -3,7 +3,6 @@ import { api } from '../../api/client.js';
 import PersonPicker from './PersonPicker.jsx';
 import DateField from '../DateField.jsx';
 import LocationPicker from './LocationPicker.jsx';
-import Modal from './Modal.jsx';
 
 export default function SchoolManager({ open: openProp, onToggle }) {
   const [schools, setSchools] = useState([]);
@@ -12,7 +11,6 @@ export default function SchoolManager({ open: openProp, onToggle }) {
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : openState;
   const toggleOpen = () => { if (isControlled) onToggle?.(); else setOpenState(o => !o); };
-  const [addOpen, setAddOpen] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [form, setForm] = useState({ name: '', city: '', address: '', phone: '', email: '', countryId: '', latitude: null, longitude: null });
   const [busy, setBusy] = useState(false);
@@ -31,7 +29,6 @@ export default function SchoolManager({ open: openProp, onToggle }) {
       const { data } = await api.post('/schools', form);
       setSchools(prev => [...prev, data]);
       setForm({ name: '', city: '', address: '', phone: '', email: '', countryId: '', latitude: null, longitude: null });
-      setAddOpen(false);
       load(); // background reconcile (brings nested relations / classes)
     } finally {
       setBusy(false);
@@ -51,46 +48,40 @@ export default function SchoolManager({ open: openProp, onToggle }) {
 
   return (
     <div className="glass-card p-4 fade-up" style={{ borderRadius: 18 }}>
-      <div className="flex justify-between items-center gap-2">
-        <button onClick={toggleOpen} className="text-left font-serif text-lg text-ink flex items-center gap-2 flex-1" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-          <span>Schools</span>
-          <span className="text-sm" style={{ color: 'var(--muted)' }}>{schools.length} items {open ? '▲' : '▼'}</span>
-        </button>
-        <button onClick={() => { setForm({ name: '', city: '', address: '', phone: '', email: '', countryId: '', latitude: null, longitude: null }); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add School</button>
-      </div>
-
-      {/* Add school modal */}
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add School" subtitle="New location" maxWidth={620}>
-        <form onSubmit={addSchool} className="space-y-3">
-          <input placeholder="School name *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} required />
-          <select value={form.countryId} onChange={e => setForm({ ...form, countryId: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }}>
-            <option value="">Country...</option>
-            {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <div className="flex gap-2 flex-wrap">
-            <input placeholder="City" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
-            <input placeholder="Exact address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <input placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
-            <input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
-          </div>
-          <LocationPicker
-            value={{ latitude: form.latitude, longitude: form.longitude }}
-            onChange={(lat, lng) => setForm({ ...form, latitude: lat, longitude: lng })}
-            nameHint={form.name}
-            cityHint={form.city}
-            countryHint={countries.find(c => c.id === form.countryId)?.name || ''}
-          />
-          <div className="flex gap-2 justify-end pt-1">
-            <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
-            <button type="submit" disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Add School'}</button>
-          </div>
-        </form>
-      </Modal>
+      <button onClick={toggleOpen} className="w-full text-left font-serif text-lg text-ink flex justify-between items-center" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+        <span>Schools</span>
+        <span className="text-sm" style={{ color: 'var(--muted)' }}>{schools.length} items {open ? '▲' : '▼'}</span>
+      </button>
 
       {open && (
         <div className="mt-4 space-y-4">
+          {/* Add school */}
+          <form onSubmit={addSchool} className="grid gap-2 p-3 rounded-xl" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
+            <div className="flex gap-2 flex-wrap">
+              <input placeholder="School name *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={`${inp} flex-1 min-w-[140px]`} style={{ borderColor: 'var(--line)' }} required />
+              <select value={form.countryId} onChange={e => setForm({ ...form, countryId: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }}>
+                <option value="">Country...</option>
+                {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <input placeholder="City" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
+              <input placeholder="Exact address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <input placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
+              <input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={`${inp} flex-1 min-w-[100px]`} style={{ borderColor: 'var(--line)' }} />
+            </div>
+            <LocationPicker
+              value={{ latitude: form.latitude, longitude: form.longitude }}
+              onChange={(lat, lng) => setForm({ ...form, latitude: lat, longitude: lng })}
+              nameHint={form.name}
+              cityHint={form.city}
+              countryHint={countries.find(c => c.id === form.countryId)?.name || ''}
+            />
+            <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add School'}</button>
+          </form>
+
           {/* Filter */}
           <div className="flex items-center gap-3 flex-wrap">
             <select value={fCountry} onChange={e => setFCountry(e.target.value)} className={inp} style={{ borderColor: 'var(--line)' }}>
