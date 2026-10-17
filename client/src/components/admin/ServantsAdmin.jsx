@@ -12,17 +12,35 @@ export default function ServantsAdmin() {
   }
   useEffect(() => { load(); }, []);
 
+  const [busy, setBusy] = useState(false);
+
   async function add(e) {
     e.preventDefault();
-    await api.post('/people', {
-      fullName: f.fullName, position: 'Servant', nationality: f.nationality,
-      priestCountryId: f.priestCountryId || null, contact: f.contact, email: f.email, available: f.available,
-    });
-    setF({ fullName: '', nationality: '', priestCountryId: '', contact: '', email: '', available: true });
-    load();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post('/people', {
+        fullName: f.fullName, position: 'Servant', nationality: f.nationality,
+        priestCountryId: f.priestCountryId || null, contact: f.contact, email: f.email, available: f.available,
+      });
+      setServants(prev => [data, ...prev.filter(s => s.id !== data.id)]);
+      setF({ fullName: '', nationality: '', priestCountryId: '', contact: '', email: '', available: true });
+    } finally {
+      setBusy(false);
+    }
   }
-  async function toggleAvailable(p) { await api.patch(`/people/${p.id}`, { available: !p.available }); load(); }
-  async function remove(id) { if (confirm('Delete servant?')) { await api.delete(`/people/${id}`); load(); } }
+  async function toggleAvailable(p) {
+    setServants(prev => prev.map(s => (s.id === p.id ? { ...s, available: !s.available } : s))); // optimistic
+    try { await api.patch(`/people/${p.id}`, { available: !p.available }); }
+    catch { setServants(prev => prev.map(s => (s.id === p.id ? { ...s, available: p.available } : s))); }
+  }
+  async function remove(id) {
+    if (!confirm('Delete servant?')) return;
+    const prev = servants;
+    setServants(servants.filter(s => s.id !== id));
+    try { await api.delete(`/people/${id}`); }
+    catch { setServants(prev); }
+  }
 
   const [editId, setEditId] = useState(null);
   const [editF, setEditF] = useState({});
@@ -31,8 +49,9 @@ export default function ServantsAdmin() {
     setEditF({ fullName: p.fullName || '', nationality: p.nationality || '', priestCountryId: p.priestCountryId || '', contact: p.contact || '', email: p.email || '' });
   }
   async function saveEdit(id) {
-    await api.patch(`/people/${id}`, { ...editF, priestCountryId: editF.priestCountryId || null });
-    setEditId(null); load();
+    const { data } = await api.patch(`/people/${id}`, { ...editF, priestCountryId: editF.priestCountryId || null });
+    setServants(prev => prev.map(s => (s.id === id ? { ...s, ...data } : s)));
+    setEditId(null);
   }
 
   const inp = "border rounded-xl px-3 py-2 text-sm";
@@ -55,7 +74,7 @@ export default function ServantsAdmin() {
           <input placeholder="Contact" value={f.contact} onChange={e => setF({ ...f, contact: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
           <input placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
         </div>
-        <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Add Servant</button>
+        <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add Servant'}</button>
       </form>
 
       <div className="space-y-2">

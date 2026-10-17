@@ -22,22 +22,36 @@ export default function PriestsAdmin() {
   useEffect(() => { loadPriests(); }, [fCountry]);
   const load = () => { loadBase(); loadPriests(); };
 
+  const [busy, setBusy] = useState(false);
+
   async function add(e) {
     e.preventDefault();
-    const nationality = f.nationality === 'Other' ? (f.nationalityOther || 'Other') : f.nationality;
-    await api.post('/people', {
-      fullName: f.fullName, isPriest: true, nationality,
-      priestCountryId: f.priestCountryId || null,
-      schoolId: f.schoolId || null,
-      position: f.position || 'Priest',
-      contact: f.contact, email: f.email,
-    });
-    setF({ fullName: '', nationality: 'Egyptian', nationalityOther: '', priestCountryId: '', schoolId: '', position: '', contact: '', email: '' });
-    setFCountry('');
-    loadBase();
-    await loadPriests('');
+    if (busy) return;
+    setBusy(true);
+    try {
+      const nationality = f.nationality === 'Other' ? (f.nationalityOther || 'Other') : f.nationality;
+      const { data } = await api.post('/people', {
+        fullName: f.fullName, isPriest: true, nationality,
+        priestCountryId: f.priestCountryId || null,
+        schoolId: f.schoolId || null,
+        position: f.position || 'Priest',
+        contact: f.contact, email: f.email,
+      });
+      setPriests(prev => [data, ...prev.filter(p => p.id !== data.id)]);
+      setF({ fullName: '', nationality: 'Egyptian', nationalityOther: '', priestCountryId: '', schoolId: '', position: '', contact: '', email: '' });
+      setFCountry('');
+      loadPriests(''); // background reconcile for nested relations
+    } finally {
+      setBusy(false);
+    }
   }
-  async function remove(id) { if (confirm('Delete priest?')) { await api.delete(`/people/${id}`); load(); } }
+  async function remove(id) {
+    if (!confirm('Delete priest?')) return;
+    const prev = priests;
+    setPriests(priests.filter(p => p.id !== id));
+    try { await api.delete(`/people/${id}`); }
+    catch { setPriests(prev); }
+  }
 
   const [editId, setEditId] = useState(null);
   const [editF, setEditF] = useState({});
@@ -46,8 +60,10 @@ export default function PriestsAdmin() {
     setEditF({ fullName: p.fullName || '', nationality: p.nationality || '', priestCountryId: p.priestCountryId || '', schoolId: p.schoolId || '', position: p.position || 'Priest', contact: p.contact || '', email: p.email || '' });
   }
   async function saveEdit(id) {
-    await api.patch(`/people/${id}`, { ...editF, priestCountryId: editF.priestCountryId || null, schoolId: editF.schoolId || null });
-    setEditId(null); load();
+    const { data } = await api.patch(`/people/${id}`, { ...editF, priestCountryId: editF.priestCountryId || null, schoolId: editF.schoolId || null });
+    setPriests(prev => prev.map(p => (p.id === id ? { ...p, ...data } : p)));
+    setEditId(null);
+    loadPriests(); // background reconcile
   }
 
   const inp = "border rounded-xl px-3 py-2 text-sm";
@@ -91,7 +107,7 @@ export default function PriestsAdmin() {
           <input placeholder="Contact" value={f.contact} onChange={e => setF({ ...f, contact: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
           <input placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
         </div>
-        <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Add Priest</button>
+        <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add Priest'}</button>
       </form>
 
       {/* Filter */}

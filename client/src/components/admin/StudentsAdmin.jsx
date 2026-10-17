@@ -31,16 +31,37 @@ export default function StudentsAdmin() {
     setClasses(sid ? (await api.get(`/classes?schoolId=${sid}`)).data : []);
   }
 
+  const [busy, setBusy] = useState(false);
+
   async function add(e) {
     e.preventDefault();
     if (!f.classId) return alert('Select a country, school and class — a student must be linked to a class.');
-    await api.post('/students', f);
-    setF({ fullName: '', birthday: '', phone: '', classId: '', fatherName: '', fatherContact: '', motherName: '', motherContact: '' });
-    setCountryId(''); setSchoolId(''); setClasses([]);
-    setFCountry(''); setFSchool('');
-    await loadStudents('', '');
+    if (busy) return;
+    setBusy(true);
+    try {
+      const chosenSchool = schools.find(s => s.id === schoolId);
+      const chosenClass = classes.find(c => c.id === f.classId);
+      const { data } = await api.post('/students', f);
+      const optimistic = {
+        ...data,
+        classLevel: { name: chosenClass?.name, school: chosenSchool ? { name: chosenSchool.name } : null },
+      };
+      setStudents(prev => [optimistic, ...prev.filter(s => s.id !== data.id)]);
+      setF({ fullName: '', birthday: '', phone: '', classId: '', fatherName: '', fatherContact: '', motherName: '', motherContact: '' });
+      setCountryId(''); setSchoolId(''); setClasses([]);
+      setFCountry(''); setFSchool('');
+      loadStudents('', ''); // background reconcile
+    } finally {
+      setBusy(false);
+    }
   }
-  async function remove(id) { if (confirm('Delete student?')) { await api.delete(`/students/${id}`); loadStudents(); } }
+  async function remove(id) {
+    if (!confirm('Delete student?')) return;
+    const prev = students;
+    setStudents(students.filter(s => s.id !== id));
+    try { await api.delete(`/students/${id}`); }
+    catch { setStudents(prev); }
+  }
 
   const [editId, setEditId] = useState(null);
   const [editF, setEditF] = useState({});
@@ -49,8 +70,10 @@ export default function StudentsAdmin() {
     setEditF({ fullName: st.fullName || '', birthday: st.birthday ? st.birthday.slice(0,10) : '', phone: st.phone || '', fatherName: st.fatherName || '', fatherContact: st.fatherContact || '', motherName: st.motherName || '', motherContact: st.motherContact || '' });
   }
   async function saveEdit(id) {
-    await api.patch(`/students/${id}`, { ...editF, birthday: editF.birthday || null });
-    setEditId(null); loadStudents();
+    const { data } = await api.patch(`/students/${id}`, { ...editF, birthday: editF.birthday || null });
+    setStudents(prev => prev.map(s => (s.id === id ? { ...s, ...data } : s)));
+    setEditId(null);
+    loadStudents(); // background reconcile
   }
 
   const inp = "border rounded-xl px-3 py-2 text-sm";
@@ -92,7 +115,7 @@ export default function StudentsAdmin() {
           <input placeholder="Mother name" value={f.motherName} onChange={e => setF({ ...f, motherName: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
           <input placeholder="Mother contact" value={f.motherContact} onChange={e => setF({ ...f, motherContact: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
         </div>
-        <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Add Student</button>
+        <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add Student'}</button>
       </form>
 
       {/* Filters */}

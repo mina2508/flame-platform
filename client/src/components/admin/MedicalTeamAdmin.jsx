@@ -8,17 +8,32 @@ export default function MedicalTeamAdmin() {
   async function load() { setMembers((await api.get('/medical-team')).data); }
   useEffect(() => { load(); }, []);
 
+  const [busy, setBusy] = useState(false);
+
   async function add(e) {
     e.preventDefault();
-    await api.post('/medical-team', form);
-    setForm({ fullName: '', specialty: '', contact: '', email: '' });
-    load();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post('/medical-team', form);
+      setMembers(prev => [...prev.filter(m => m.id !== data.id), data]);
+      setForm({ fullName: '', specialty: '', contact: '', email: '' });
+    } finally {
+      setBusy(false);
+    }
   }
   async function toggleAvailable(m) {
-    await api.patch(`/medical-team/${m.id}`, { available: !m.available });
-    load();
+    setMembers(prev => prev.map(x => (x.id === m.id ? { ...x, available: !x.available } : x)));
+    try { await api.patch(`/medical-team/${m.id}`, { available: !m.available }); }
+    catch { setMembers(prev => prev.map(x => (x.id === m.id ? { ...x, available: m.available } : x))); }
   }
-  async function remove(id) { if (confirm('Delete?')) { await api.delete(`/medical-team/${id}`); load(); } }
+  async function remove(id) {
+    if (!confirm('Delete?')) return;
+    const prev = members;
+    setMembers(members.filter(m => m.id !== id));
+    try { await api.delete(`/medical-team/${id}`); }
+    catch { setMembers(prev); }
+  }
 
   const [editId, setEditId] = useState(null);
   const [editF, setEditF] = useState({});
@@ -27,8 +42,9 @@ export default function MedicalTeamAdmin() {
     setEditF({ fullName: m.fullName || '', specialty: m.specialty || '', contact: m.contact || '', email: m.email || '' });
   }
   async function saveEdit(id) {
-    await api.patch(`/medical-team/${id}`, editF);
-    setEditId(null); load();
+    const { data } = await api.patch(`/medical-team/${id}`, editF);
+    setMembers(prev => prev.map(m => (m.id === id ? { ...m, ...data } : m)));
+    setEditId(null);
   }
 
   const inp = "border rounded-xl px-3 py-2 text-sm flex-1 min-w-[120px]";
@@ -42,7 +58,7 @@ export default function MedicalTeamAdmin() {
         <input placeholder="Specialty" value={form.specialty} onChange={e => setForm({ ...form, specialty: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
         <input placeholder="Contact" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
         <input placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
-        <button className="pill-btn pill-btn-primary text-sm">+ Add</button>
+        <button disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add'}</button>
       </form>
 
       <div className="space-y-2">
