@@ -263,3 +263,53 @@ tbody tr:hover { background: rgba(52, 169, 214, 0.05); }
   justify-content: center;
   min-height: 50vh;
 }
+
+/* ── App-wide top progress bar ── */
+.global-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 9999;
+  background: transparent;
+  pointer-events: none;
+}
+
+.global-loader-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--flame), var(--gold), var(--sky), var(--leaf));
+  background-size: 200% 100%;
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 10px rgba(240, 74, 24, 0.5);
+  transform-origin: left;
+}
+
+/* While requests are in flight: creep toward ~90% and shimmer. */
+.global-loader-bar.is-active {
+  width: 90%;
+  animation: gl-progress 2.4s ease-out forwards, gl-shimmer 1.1s linear infinite;
+}
+
+/* When finished: snap to 100% then fade. */
+.global-loader-bar.is-done {
+  width: 100%;
+  transition: width 0.2s ease-out;
+  animation: gl-fade 0.35s ease-out forwards;
+}
+
+@keyframes gl-progress {
+  0%   { width: 0%; }
+  40%  { width: 55%; }
+  80%  { width: 82%; }
+  100% { width: 90%; }
+}
+
+@keyframes gl-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes gl-fade {
+  to { opacity: 0; }
+}

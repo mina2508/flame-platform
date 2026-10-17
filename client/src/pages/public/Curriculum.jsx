@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
+import { SkeletonGrid } from '../../components/Loader.jsx';
 
 const LANG = { en: 'English', ar: 'Arabic', fr: 'French' };
 const TABS = [
@@ -12,13 +13,20 @@ export default function Curriculum() {
   const [tab, setTab] = useState('curriculum');
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  async function load(endpoint) {
-    setItems((await api.get(endpoint)).data);
-  }
   useEffect(() => {
     const t = TABS.find(t => t.id === tab);
-    if (t) load(t.endpoint);
+    if (!t) return;
+    let active = true;
+    setLoading(true);
+    setError(null);
+    api.get(t.endpoint)
+      .then(r => { if (active) setItems(r.data); })
+      .catch(() => { if (active) setError('Could not load this category. Please try again.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [tab]);
 
   const filtered = q
@@ -58,12 +66,19 @@ export default function Curriculum() {
       </div>
 
       {/* List */}
-      {filtered.length === 0 && (
+      {loading && <SkeletonGrid count={6} />}
+
+      {!loading && error && (
+        <div className="glass-card p-6 text-center" style={{ borderRadius: 20, color: 'var(--danger)' }}>{error}</div>
+      )}
+
+      {!loading && !error && filtered.length === 0 && (
         <div className="p-6 rounded-2xl border text-center" style={{ borderColor: 'var(--line)', borderStyle: 'dashed', color: 'var(--muted)' }}>
           No files yet in this category.
         </div>
       )}
 
+      {!loading && !error && (
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((c, i) => (
           <div key={c.id} className="glass-card p-5 fade-up transition-transform hover:-translate-y-1"
@@ -85,6 +100,7 @@ export default function Curriculum() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

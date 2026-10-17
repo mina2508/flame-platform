@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
+import GlobalLoader from './components/GlobalLoader.jsx';
 import Home from './pages/public/Home.jsx';
 import Dashboard from './pages/public/Dashboard.jsx';
 import Activities from './pages/public/Activities.jsx';
@@ -15,6 +16,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 export default function App() {
   return (
     <div className="min-h-screen">
+      <GlobalLoader />
       <Navbar />
       <main className="max-w-6xl mx-auto px-4 pt-28 pb-16" style={{ width: 'min(1240px, calc(100% - 28px))' }}>
         <Routes>

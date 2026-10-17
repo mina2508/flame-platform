@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
+import Loader from '../../components/Loader.jsx';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -39,9 +40,16 @@ export default function Birthdays() {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
   const [q, setQ] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/birthdays', { params: { month } }).then((r) => setItems(r.data));
+    let active = true;
+    setLoading(true);
+    api.get('/birthdays', { params: { month } })
+      .then((r) => { if (active) setItems(r.data); })
+      .catch(() => { if (active) setItems([]); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [month]);
 
   const days = daysInMonth(year, month);
@@ -112,6 +120,8 @@ export default function Birthdays() {
         <h2 className="font-display font-semibold text-center text-xl text-ink mb-4">
           {MONTHS[month - 1]} {year}
         </h2>
+        {loading && <Loader label="Loading birthdays…" />}
+        {!loading && (<>
         <div className="grid grid-cols-7 text-center text-xs text-muted font-semibold mb-2">
           {WEEKDAYS.map((d) => <div key={d}>{d}</div>)}
         </div>
@@ -142,6 +152,7 @@ export default function Birthdays() {
             );
           })}
         </div>
+        </>)}
       </div>
 
       {/* Selected day */}

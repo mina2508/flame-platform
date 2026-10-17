@@ -9,8 +9,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime uses the pooled (pgbouncer) connection for fast serverless access.
+  url       = env("DATABASE_URL")
+  // Migrations / `prisma db push` use the direct connection (pooler can't run DDL).
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────── Auth ───────────────────────────
