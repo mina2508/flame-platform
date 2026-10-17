@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import DateField from '../DateField.jsx';
+import Modal from './Modal.jsx';
 
 export default function TeachersAdmin() {
+  const [addOpen, setAddOpen] = useState(false);
   const [teachers, setTeachers] = useState([]);
   const [countries, setCountries] = useState([]);
   const [schools, setSchools] = useState([]);
@@ -57,6 +59,7 @@ export default function TeachersAdmin() {
       setFCountry(''); setFSchool('');
       setTeachers(prev => [optimistic, ...prev.filter(t => t.id !== data.id)]);
       setF({ fullName: '', birthdate: '', nationality: '', contact: '', email: '', schoolId: '', classId: '' });
+      setAddOpen(false);
 
       // Reconcile with the server (fills in nested relations) without blocking the UI.
       loadTeachers('', '');
@@ -91,34 +94,36 @@ export default function TeachersAdmin() {
 
   return (
     <div>
-      <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>Create a teacher and assign to a school/class. Filter by country and school.</p>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <p className="text-sm" style={{ color: 'var(--muted)' }}>Create a teacher and assign to a school/class. Filter by country and school.</p>
+        <button onClick={() => { setF({ fullName: '', birthdate: '', nationality: '', contact: '', email: '', schoolId: '', classId: '' }); setClasses([]); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add Teacher</button>
+      </div>
 
-      {/* Create form */}
-      <form onSubmit={add} className="grid gap-2 p-4 rounded-2xl mb-4" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
-        <div className="flex gap-2 flex-wrap">
-          <input placeholder="Teacher name *" value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} className={`${inp} flex-1 min-w-[140px]`} style={{ borderColor: 'var(--line)' }} required />
-          <div>
-            <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Birthdate</span>
+      {/* Create modal */}
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Teacher" subtitle="New person">
+        <form onSubmit={add} className="space-y-3">
+          <input placeholder="Teacher name *" value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} required />
+          <label className="grid gap-1">
+            <span className="text-xs font-black uppercase" style={{ color: 'var(--muted)' }}>Birthdate</span>
             <DateField value={f.birthdate} onChange={v => setF({ ...f, birthdate: v })} max={today} placeholder="Birthdate" />
-          </div>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <input placeholder="Nationality" value={f.nationality} onChange={e => setF({ ...f, nationality: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
-          <input placeholder="Contact" value={f.contact} onChange={e => setF({ ...f, contact: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
-          <input placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <select value={f.schoolId} onChange={e => { setF({ ...f, schoolId: e.target.value, classId: '' }); loadClasses(e.target.value); }} className={inp} style={{ borderColor: 'var(--line)' }}>
+          </label>
+          <input placeholder="Nationality" value={f.nationality} onChange={e => setF({ ...f, nationality: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
+          <input placeholder="Contact" value={f.contact} onChange={e => setF({ ...f, contact: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
+          <input placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
+          <select value={f.schoolId} onChange={e => { setF({ ...f, schoolId: e.target.value, classId: '' }); loadClasses(e.target.value); }} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }}>
             <option value="">School...</option>
             {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <select value={f.classId} onChange={e => setF({ ...f, classId: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} disabled={!f.schoolId}>
+          <select value={f.classId} onChange={e => setF({ ...f, classId: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} disabled={!f.schoolId}>
             <option value="">Class (optional)...</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-        </div>
-        <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add Teacher'}</button>
-      </form>
+          <div className="flex gap-2 justify-end pt-1">
+            <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
+            <button type="submit" disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Add Teacher'}</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap mb-3">

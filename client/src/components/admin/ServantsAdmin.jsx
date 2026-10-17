@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
+import Modal from './Modal.jsx';
 
 export default function ServantsAdmin() {
+  const [addOpen, setAddOpen] = useState(false);
   const [servants, setServants] = useState([]);
   const [countries, setCountries] = useState([]);
   const [f, setF] = useState({ fullName: '', nationality: '', priestCountryId: '', contact: '', email: '', available: true });
@@ -25,6 +27,7 @@ export default function ServantsAdmin() {
       });
       setServants(prev => [data, ...prev.filter(s => s.id !== data.id)]);
       setF({ fullName: '', nationality: '', priestCountryId: '', contact: '', email: '', available: true });
+      setAddOpen(false);
     } finally {
       setBusy(false);
     }
@@ -59,23 +62,27 @@ export default function ServantsAdmin() {
 
   return (
     <div>
-      <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>Add acting servants. Availability shows when selecting people for missions.</p>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <p className="text-sm" style={{ color: 'var(--muted)' }}>Add acting servants. Availability shows when selecting people for missions.</p>
+        <button onClick={() => { setF({ fullName: '', nationality: '', priestCountryId: '', contact: '', email: '', available: true }); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add Servant</button>
+      </div>
 
-      <form onSubmit={add} className="grid gap-2 p-4 rounded-2xl mb-4" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
-        <div className="flex gap-2 flex-wrap">
-          <input placeholder="Servant name *" value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} className={`${inp} flex-1 min-w-[160px]`} style={{ borderColor: 'var(--line)' }} required />
-          <input placeholder="Nationality" value={f.nationality} onChange={e => setF({ ...f, nationality: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
-          <select value={f.priestCountryId} onChange={e => setF({ ...f, priestCountryId: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }}>
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Servant" subtitle="New person">
+        <form onSubmit={add} className="space-y-3">
+          <input placeholder="Servant name *" value={f.fullName} onChange={e => setF({ ...f, fullName: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} required />
+          <input placeholder="Nationality" value={f.nationality} onChange={e => setF({ ...f, nationality: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
+          <select value={f.priestCountryId} onChange={e => setF({ ...f, priestCountryId: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }}>
             <option value="">Country (optional)...</option>
             {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <input placeholder="Contact" value={f.contact} onChange={e => setF({ ...f, contact: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
-          <input placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
-        </div>
-        <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add Servant'}</button>
-      </form>
+          <input placeholder="Contact" value={f.contact} onChange={e => setF({ ...f, contact: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
+          <input placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
+          <div className="flex gap-2 justify-end pt-1">
+            <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
+            <button type="submit" disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Add Servant'}</button>
+          </div>
+        </form>
+      </Modal>
 
       <div className="space-y-2">
         {servants.map(p => (

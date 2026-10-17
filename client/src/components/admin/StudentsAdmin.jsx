@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
 import DateField from '../DateField.jsx';
+import Modal from './Modal.jsx';
 
 export default function StudentsAdmin() {
+  const [addOpen, setAddOpen] = useState(false);
   const [schools, setSchools] = useState([]);
   const [countries, setCountries] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -50,6 +52,7 @@ export default function StudentsAdmin() {
       setF({ fullName: '', birthday: '', phone: '', classId: '', fatherName: '', fatherContact: '', motherName: '', motherContact: '' });
       setCountryId(''); setSchoolId(''); setClasses([]);
       setFCountry(''); setFSchool('');
+      setAddOpen(false);
       loadStudents('', ''); // background reconcile
     } finally {
       setBusy(false);
@@ -81,9 +84,13 @@ export default function StudentsAdmin() {
 
   return (
     <div>
-      <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>Create a student. Each student must be linked to a school and class.</p>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <p className="text-sm" style={{ color: 'var(--muted)' }}>Create a student. Each student must be linked to a school and class.</p>
+        <button onClick={() => { setF({ fullName: '', birthday: '', phone: '', classId: '', fatherName: '', fatherContact: '', motherName: '', motherContact: '' }); setCountryId(''); setSchoolId(''); setClasses([]); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add Student</button>
+      </div>
 
-      <form onSubmit={add} className="grid gap-2 p-4 rounded-2xl mb-4" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Student" subtitle="New person">
+      <form onSubmit={add} className="space-y-3">
         {/* Cascade: Country → School → Class */}
         <div className="flex gap-2 flex-wrap">
           <select value={countryId} onChange={e => { setCountryId(e.target.value); setSchoolId(''); setClasses([]); setF({ ...f, classId: '' }); }} className={inp} style={{ borderColor: 'var(--line)' }} required>
@@ -115,8 +122,12 @@ export default function StudentsAdmin() {
           <input placeholder="Mother name" value={f.motherName} onChange={e => setF({ ...f, motherName: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
           <input placeholder="Mother contact" value={f.motherContact} onChange={e => setF({ ...f, motherContact: e.target.value })} className={`${inp} flex-1`} style={{ borderColor: 'var(--line)' }} />
         </div>
-        <button disabled={busy} className="pill-btn pill-btn-primary text-sm justify-self-start" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : '+ Add Student'}</button>
+        <div className="flex gap-2 justify-end pt-1">
+          <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
+          <button type="submit" disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Saving…' : 'Add Student'}</button>
+        </div>
       </form>
+      </Modal>
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap mb-3">
