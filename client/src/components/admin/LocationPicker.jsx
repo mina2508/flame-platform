@@ -214,7 +214,7 @@ export default function LocationPicker({ value, onChange, nameHint = '', cityHin
       <p className="text-xs mt-3 mb-1" style={{ color: 'var(--muted)' }}>
         Click anywhere on the map or drag the pin to set the exact school location.
       </p>
-      <div style={{ height: 300, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line)' }}>
+      <div className="location-picker-map" style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line)' }}>
         <MapContainer center={center} zoom={hasPin ? 15 : 4} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
           <TileLayer
             attribution='&copy; OpenStreetMap contributors'
