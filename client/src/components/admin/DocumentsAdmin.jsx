@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
+import Modal from './Modal.jsx';
 
 function DocManager({ title, endpoint, maxMB = 12 }) {
   const [items, setItems] = useState([]);
@@ -9,6 +10,8 @@ function DocManager({ title, endpoint, maxMB = 12 }) {
   const [file, setFile] = useState(null);
   const [schoolIds, setSchoolIds] = useState([]);
   const [classIds, setClassIds] = useState([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     setItems((await api.get(endpoint)).data);
@@ -20,18 +23,29 @@ function DocManager({ title, endpoint, maxMB = 12 }) {
   async function submit(e) {
     e.preventDefault();
     if (file && file.size > maxMB * 1024 * 1024) return alert(`File must be ≤ ${maxMB}MB`);
-    const fd = new FormData();
-    fd.append('title', form.title);
-    fd.append('description', form.description);
-    fd.append('language', form.language);
-    fd.append('schoolIds', JSON.stringify(schoolIds));
-    fd.append('classIds', JSON.stringify(classIds));
-    if (file) fd.append('file', file);
-    await api.post(endpoint, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-    setForm({ title: '', description: '', language: 'en' }); setFile(null); setSchoolIds([]); setClassIds([]);
-    load();
+    if (busy) return;
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('title', form.title);
+      fd.append('description', form.description);
+      fd.append('language', form.language);
+      fd.append('schoolIds', JSON.stringify(schoolIds));
+      fd.append('classIds', JSON.stringify(classIds));
+      if (file) fd.append('file', file);
+      await api.post(endpoint, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setForm({ title: '', description: '', language: 'en' }); setFile(null); setSchoolIds([]); setClassIds([]);
+      setAddOpen(false);
+      load();
+    } finally { setBusy(false); }
   }
-  async function remove(id) { if (confirm('Delete?')) { await api.delete(`${endpoint}/${id}`); load(); } }
+  async function remove(id) {
+    if (!confirm('Delete?')) return;
+    const prev = items;
+    setItems(items.filter(it => it.id !== id));
+    try { await api.delete(`${endpoint}/${id}`); }
+    catch { setItems(prev); }
+  }
 
   const toggle = (arr, set, id) => set(arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id]);
   const inp = "border rounded-xl px-3 py-2 text-sm";
@@ -54,44 +68,52 @@ function DocManager({ title, endpoint, maxMB = 12 }) {
   return (
     <div className="glass-card p-5 fade-up" style={{ borderRadius: 18 }}>
       <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-        <h2 className="font-serif text-lg text-ink">{title}</h2>
-        <span className="badge badge-info text-xs">{items.length} items</span>
+        <div className="flex items-center gap-2">
+          <h2 className="font-serif text-lg text-ink">{title}</h2>
+          <span className="badge badge-info text-xs">{items.length} items</span>
+        </div>
+        <button onClick={() => { setForm({ title: '', description: '', language: 'en' }); setFile(null); setSchoolIds([]); setClassIds([]); setAddOpen(true); }} className="pill-btn pill-btn-primary text-sm whitespace-nowrap">+ Add New</button>
       </div>
       <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>Upload a PDF (≤{maxMB}MB) and assign it to multiple classes and schools.</p>
 
-      <form onSubmit={submit} className="grid gap-3 p-4 rounded-2xl mb-4" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
-        <div className="flex gap-2 flex-wrap">
-          <input placeholder="Title *" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className={`${inp} flex-1 min-w-[140px]`} style={{ borderColor: 'var(--line)' }} required />
-          <select value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }}>
-            <option value="en">English</option><option value="ar">Arabic</option><option value="fr">French</option>
-          </select>
-        </div>
-        <input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }} />
-        <input type="file" accept="application/pdf" onChange={e => setFile(e.target.files[0])} className="text-sm" />
-        <div>
-          <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Assign to Schools</span>
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title={`Add — ${title}`} subtitle="Upload & assign" maxWidth={620}>
+        <form onSubmit={submit} className="space-y-3">
           <div className="flex gap-2 flex-wrap">
-            {schools.map(s => (
-              <button key={s.id} type="button" onClick={() => toggle(schoolIds, setSchoolIds, s.id)}
-                className="px-2.5 py-1 rounded-full text-xs font-bold" style={schoolIds.includes(s.id) ? { background: 'var(--sky)', color: '#fff', border: 'none' } : { background: '#fff', border: '1px solid var(--line)', color: 'var(--muted)' }}>
-                {s.name}
-              </button>
-            ))}
+            <input placeholder="Title *" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className={`${inp} flex-1 min-w-[140px]`} style={{ borderColor: 'var(--line)' }} required />
+            <select value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }}>
+              <option value="en">English</option><option value="ar">Arabic</option><option value="fr">French</option>
+            </select>
           </div>
-        </div>
-        <div>
-          <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Assign to Classes {schoolIds.length === 0 && <em style={{ textTransform: 'none', fontWeight: 400 }}>(select schools first)</em>}</span>
-          <div className="flex gap-2 flex-wrap max-h-28 overflow-auto">
-            {classes.filter(c => schoolIds.includes(c.schoolId)).map(c => (
-              <button key={c.id} type="button" onClick={() => toggle(classIds, setClassIds, c.id)}
-                className="px-2.5 py-1 rounded-full text-xs font-bold" style={classIds.includes(c.id) ? { background: 'var(--leaf)', color: '#fff', border: 'none' } : { background: '#fff', border: '1px solid var(--line)', color: 'var(--muted)' }}>
-                {c.name}{c.school ? ` (${c.school.name})` : ''}
-              </button>
-            ))}
+          <input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className={`${inp} w-full`} style={{ borderColor: 'var(--line)' }} />
+          <input type="file" accept="application/pdf" onChange={e => setFile(e.target.files[0])} className="text-sm" />
+          <div>
+            <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Assign to Schools</span>
+            <div className="flex gap-2 flex-wrap">
+              {schools.map(s => (
+                <button key={s.id} type="button" onClick={() => toggle(schoolIds, setSchoolIds, s.id)}
+                  className="px-2.5 py-1 rounded-full text-xs font-bold" style={schoolIds.includes(s.id) ? { background: 'var(--sky)', color: '#fff', border: 'none' } : { background: '#fff', border: '1px solid var(--line)', color: 'var(--muted)' }}>
+                  {s.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Upload & Assign</button>
-      </form>
+          <div>
+            <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Assign to Classes {schoolIds.length === 0 && <em style={{ textTransform: 'none', fontWeight: 400 }}>(select schools first)</em>}</span>
+            <div className="flex gap-2 flex-wrap max-h-28 overflow-auto">
+              {classes.filter(c => schoolIds.includes(c.schoolId)).map(c => (
+                <button key={c.id} type="button" onClick={() => toggle(classIds, setClassIds, c.id)}
+                  className="px-2.5 py-1 rounded-full text-xs font-bold" style={classIds.includes(c.id) ? { background: 'var(--leaf)', color: '#fff', border: 'none' } : { background: '#fff', border: '1px solid var(--line)', color: 'var(--muted)' }}>
+                  {c.name}{c.school ? ` (${c.school.name})` : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end pt-1">
+            <button type="button" onClick={() => setAddOpen(false)} className="pill-btn text-sm">Cancel</button>
+            <button type="submit" disabled={busy} className="pill-btn pill-btn-primary text-sm" style={{ opacity: busy ? 0.6 : 1 }}>{busy ? 'Uploading…' : 'Upload & Assign'}</button>
+          </div>
+        </form>
+      </Modal>
 
       <div className="space-y-2">
         {items.map(it => (
