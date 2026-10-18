@@ -209,9 +209,9 @@ export default function Dashboard() {
         <>
           {/* KPI Strip */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <KpiCard icon="🎯" value={data.kpis.totalMissions} label="Total Missions" note="Distinct missions in the period" accent="rgba(240,74,24,0.10)" />
+            <KpiCard icon="🎯" value={data.kpis.totalMissions} label="Total Activities" note="Logged activities in the period" accent="rgba(240,74,24,0.10)" />
             <KpiCard icon="🏫" value={data.kpis.activeSchools} label="Active Schools" note="Schools with activity in the period" accent="rgba(52,169,214,0.12)" />
-            <KpiCard icon="✅" value={data.kpis.completed} label="Completed" note="Missions fully completed" accent="rgba(39,149,106,0.12)" />
+            <KpiCard icon="✅" value={data.kpis.completed} label="Completed" note="Activities fully completed" accent="rgba(39,149,106,0.12)" />
             <KpiCard icon="🕓" value={data.kpis.expected} label="Expected" note="Not started yet" accent="rgba(52,169,214,0.10)" />
             <KpiCard icon="🔄" value={data.kpis.pending} label="Pending" note="Started but not completed" accent="rgba(198,150,33,0.14)" />
           </div>
@@ -277,7 +277,7 @@ export default function Dashboard() {
                       <div>
                         <strong className="text-ink">{s.school}</strong>
                         <small className="block mt-0.5" style={{ color: 'var(--muted)' }}>
-                          {s.totalMissions} missions · {taskCount} task records · {s.completed} completed · {s.pending} pending · latest {s.latest}
+                          {s.totalMissions} activities · {taskCount} task records · {s.completed} completed · {s.pending} pending · latest {s.latest}
                         </small>
                       </div>
                       <span className={`badge ${s.status === 'Strong' ? 'badge-good' : 'badge-watch'}`}>{s.completionPct}%</span>
@@ -416,7 +416,7 @@ export default function Dashboard() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 mt-3">
                     <span className="rounded-xl p-2 text-center text-xs" style={{ background: '#fff9f2', color: 'var(--muted)' }}>
-                      <strong className="block text-ink">{s.totalMissions}</strong>missions
+                      <strong className="block text-ink">{s.totalMissions}</strong>activities
                     </span>
                     <span className="rounded-xl p-2 text-center text-xs" style={{ background: '#fff9f2', color: 'var(--muted)' }}>
                       <strong className="block text-ink">{data.byCategory.filter(c => {
