@@ -6,10 +6,10 @@ import { CAN_EDIT_CONTENT } from '../permissions.js';
 const router = Router();
 
 const INCLUDE = {
-  countries: { include: { country: true } },
-  schools: { include: { school: true } },
-  people: { include: { person: true } },
-  medicalTeam: { include: { member: true } },
+  countries: { include: { country: { select: { id: true, name: true } } } },
+  schools: { include: { school: { select: { id: true, name: true } } } },
+  people: { include: { person: { select: { id: true, fullName: true } } } },
+  medicalTeam: { include: { member: { select: { id: true, fullName: true } } } },
 };
 
 // Map a mission type to a dashboard LogType.
@@ -158,10 +158,11 @@ router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res,
 // Edit a mission: status, start/end dates, summary, counts. Keeps dashboard logs in sync.
 router.patch('/:id', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res, next) => {
   try {
-    const { title, status, startDate, endDate, summary, numPeople, durationDays, anonymousCount } = req.body;
+    const { title, type, status, startDate, endDate, summary, numPeople, durationDays, anonymousCount } = req.body;
 
     const data = {};
     if (title !== undefined) data.title = title;
+    if (type !== undefined) data.type = type;
     if (status !== undefined) data.status = status;
     if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null;
@@ -219,9 +220,11 @@ router.patch('/:id/school/:schoolId', requireAuth, requireRole(...CAN_EDIT_CONTE
     if (note !== undefined) data.note = note;
     if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Nothing to update' });
 
-    const updated = await prisma.missionSchool.update({
+    // Upsert so it works even if the MissionSchool row is somehow missing.
+    const updated = await prisma.missionSchool.upsert({
       where: { missionId_schoolId: { missionId, schoolId } },
-      data,
+      update: data,
+      create: { missionId, schoolId, status: status ?? 'expected', note: note ?? null },
     });
 
     // Sync the matching dashboard log (one per mission+school).

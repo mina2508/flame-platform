@@ -57,15 +57,23 @@ export default function MissionsAdmin() {
 
   const [schoolRows, setSchoolRows] = useState([]); // per-school [{schoolId, name, status, note}]
 
+  const [schoolsLoading, setSchoolsLoading] = useState(false);
+  const [rowSaving, setRowSaving] = useState(null); // schoolId currently saving
+
   async function startEdit(m) {
+    const knownType = MISSION_TYPES.includes(m.type) ? m.type : 'Other';
     setEditing({
       id: m.id,
+      title: m.title || '',
+      type: knownType,
+      typeOther: knownType === 'Other' ? (m.type || '') : '',
       status: m.status || 'expected',
       startDate: m.startDate ? m.startDate.slice(0, 10) : '',
       endDate: m.endDate ? m.endDate.slice(0, 10) : '',
       summary: m.summary || '',
     });
     setSchoolRows([]);
+    setSchoolsLoading(true);
     // Load the full mission to get per-school status/notes.
     try {
       const full = (await api.get(`/missions/${m.id}`)).data;
@@ -76,17 +84,25 @@ export default function MissionsAdmin() {
         note: s.note || '',
       })));
     } catch {}
+    finally { setSchoolsLoading(false); }
   }
   async function saveEdit() {
-    const { id, ...data } = editing;
-    await api.patch(`/missions/${id}`, data);
+    const { id, type, typeOther, ...rest } = editing;
+    const resolvedType = type === 'Other' ? (typeOther || 'Other') : type;
+    await api.patch(`/missions/${id}`, { ...rest, type: resolvedType });
     setEditing(null);
     load();
   }
-  // Save one school's status/note (per-school override).
+  // Save one school's status/note (per-school override). Updates in place.
   async function saveSchoolRow(missionId, row) {
-    await api.patch(`/missions/${missionId}/school/${row.schoolId}`, { status: row.status, note: row.note });
-    load();
+    setRowSaving(row.schoolId);
+    try {
+      await api.patch(`/missions/${missionId}/school/${row.schoolId}`, { status: row.status, note: row.note });
+      // keep the row as-is (already reflects the saved values)
+      load(); // refresh list counts/statuses in the background
+    } finally {
+      setRowSaving(null);
+    }
   }
   function updateSchoolRow(i, k, v) {
     const rows = [...schoolRows]; rows[i][k] = v; setSchoolRows(rows);
@@ -224,7 +240,18 @@ export default function MissionsAdmin() {
 
             {editing?.id === m.id && (
               <div className="mt-3 p-3 rounded-xl grid gap-2" style={{ background: '#fffaf4', border: '1px solid var(--line)' }}>
+                {/* Name + type */}
+                <div className="flex gap-2 flex-wrap">
+                  <input value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} className={`${inp} flex-1 min-w-[160px]`} style={{ borderColor: 'var(--line)' }} placeholder="Mission title" />
+                  <select value={editing.type} onChange={e => setEditing({ ...editing, type: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }}>
+                    {MISSION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  {editing.type === 'Other' && (
+                    <input value={editing.typeOther} onChange={e => setEditing({ ...editing, typeOther: e.target.value })} className={`${inp} flex-1 min-w-[140px]`} style={{ borderColor: 'var(--line)' }} placeholder="Enter mission type" />
+                  )}
+                </div>
                 <div className="flex gap-2 flex-wrap items-center">
+                  <label className="text-xs font-black uppercase" style={{ color: 'var(--muted)' }}>Status (all schools)</label>
                   <select value={editing.status} onChange={e => setEditing({ ...editing, status: e.target.value })} className={inp} style={{ borderColor: 'var(--line)' }}>
                     {MISSION_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                   </select>
@@ -235,17 +262,21 @@ export default function MissionsAdmin() {
                 </div>
                 <textarea value={editing.summary} onChange={e => setEditing({ ...editing, summary: e.target.value })} className={inp} rows={2} style={{ borderColor: 'var(--line)' }} placeholder="Summary" />
                 <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                  Saving the mission status above applies it to <strong>every school</strong>. To track schools separately, set each school’s own status / note below.
+                  Saving below applies the mission status to <strong>every school</strong>. To track schools separately, set each school’s own status / note.
                 </p>
                 <div className="flex gap-2">
-                  <button onClick={saveEdit} className="pill-btn pill-btn-primary text-xs">Save mission (all schools)</button>
+                  <button onClick={saveEdit} className="pill-btn pill-btn-primary text-xs">Save mission (applies to all schools)</button>
                   <button onClick={() => setEditing(null)} className="pill-btn text-xs">Cancel</button>
                 </div>
 
                 {/* Per-school status + note */}
-                {schoolRows.length > 0 && (
-                  <div className="mt-2">
-                    <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Per-school status &amp; notes</span>
+                <div className="mt-2">
+                  <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Per-school status &amp; mission log</span>
+                  {schoolsLoading ? (
+                    <p className="text-xs" style={{ color: 'var(--muted)' }}>Loading schools…</p>
+                  ) : schoolRows.length === 0 ? (
+                    <p className="text-xs" style={{ color: 'var(--muted)' }}>No schools on this mission.</p>
+                  ) : (
                     <div className="grid gap-2">
                       {schoolRows.map((row, i) => (
                         <div key={row.schoolId} className="rounded-lg border p-2 bg-white grid gap-1.5" style={{ borderColor: 'var(--line)' }}>
@@ -254,14 +285,16 @@ export default function MissionsAdmin() {
                             <select value={row.status} onChange={e => updateSchoolRow(i, 'status', e.target.value)} className="border rounded-lg px-2 py-1 text-xs" style={{ borderColor: 'var(--line)' }}>
                               {MISSION_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                             </select>
-                            <button onClick={() => saveSchoolRow(editing.id, row)} className="text-xs font-bold" style={{ color: 'var(--good)', border: 'none', background: 'none', cursor: 'pointer' }}>Save</button>
+                            <button onClick={() => saveSchoolRow(editing.id, row)} disabled={rowSaving === row.schoolId} className="text-xs font-bold" style={{ color: 'var(--good)', border: 'none', background: 'none', cursor: 'pointer', opacity: rowSaving === row.schoolId ? 0.5 : 1 }}>
+                              {rowSaving === row.schoolId ? 'Saving…' : 'Save'}
+                            </button>
                           </div>
-                          <textarea value={row.note} onChange={e => updateSchoolRow(i, 'note', e.target.value)} className="border rounded-lg px-2 py-1 text-xs" rows={2} placeholder="What happened at this school…" style={{ borderColor: 'var(--line)' }} />
+                          <textarea value={row.note} onChange={e => updateSchoolRow(i, 'note', e.target.value)} className="border rounded-lg px-2 py-1 text-xs" rows={2} placeholder="Mission log — what happened at this school…" style={{ borderColor: 'var(--line)' }} />
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
