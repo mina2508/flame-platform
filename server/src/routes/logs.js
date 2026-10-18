@@ -34,7 +34,18 @@ router.get('/', async (req, res, next) => {
     if (schoolId) where.schoolId = schoolId;
     if (typeId) where.logTypeId = typeId;
     if (status) where.status = status;
-    res.json(await prisma.missionLog.findMany({ where, include: { tasks: true, logType: true, school: true }, orderBy: { logDate: 'desc' } }));
+    const rows = await prisma.missionLog.findMany({ where, include: { tasks: true, logType: true, school: true }, orderBy: { logDate: 'desc' } });
+    // Clean the display: split the internal `mission:<id>` tag out of notes so
+    // the UI shows a readable note (what the admin typed), not the raw tag.
+    const shaped = rows.map(r => {
+      const m = /^mission:([0-9a-f-]+)\s*\|\s*(.*)$/is.exec(r.notes || '');
+      return {
+        ...r,
+        missionId: m ? m[1] : null,
+        notes: m ? m[2].trim() : (r.notes || ''),
+      };
+    });
+    res.json(shaped);
   } catch (e) { next(e); }
 });
 

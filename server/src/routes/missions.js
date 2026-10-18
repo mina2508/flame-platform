@@ -113,8 +113,11 @@ router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res,
       const peopleNames = mission.people.map(p => p.person?.fullName).filter(Boolean);
       const medicNames = mission.medicalTeam.map(m => m.member?.fullName).filter(Boolean);
 
-      // Capture ALL mission data as task records so nothing is lost in the dashboard.
-      const tasks = [{ question: `${type} mission conducted: ${title}`, performed: true }];
+      // Capture mission data as detail task records (shown as meta chips on the
+      // dashboard). We do NOT add a "<type> mission conducted" boilerplate task —
+      // it duplicates the title and goes stale when the type changes. The real
+      // content is the admin's per-school note.
+      const tasks = [];
       tasks.push({ question: `Status: ${status}`, performed: status === 'completed' });
       // Note: status values are expected (not started) | pending (in progress) | completed
       if (startDate || endDate) {
@@ -227,9 +230,12 @@ router.patch('/:id/school/:schoolId', requireAuth, requireRole(...CAN_EDIT_CONTE
       create: { missionId, schoolId, status: status ?? 'expected', note: note ?? null },
     });
 
-    // Sync the matching dashboard log (one per mission+school).
+    // Sync the matching dashboard log (one per mission+school): status + the
+    // per-school note. Notes keep the `mission:<id>` tag (for grouping) followed
+    // by the human note; the display layer strips the tag.
     const logData = {};
     if (status !== undefined) logData.status = status;
+    if (note !== undefined) logData.notes = `mission:${missionId} | ${note || ''}`;
     if (Object.keys(logData).length) {
       await prisma.missionLog.updateMany({
         where: { schoolId, notes: { contains: `mission:${missionId}` } },

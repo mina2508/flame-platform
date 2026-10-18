@@ -309,6 +309,11 @@ export default function Dashboard() {
                                     </div>
                                     {log.logDate && <small className="block mt-0.5" style={{ color: 'var(--muted)' }}>📅 {String(log.logDate).slice(0,10)}</small>}
 
+                                    {/* The admin's own note for this school (what happened) */}
+                                    {log.notes && (
+                                      <p className="text-xs mt-2 rounded-lg px-2 py-1.5" style={{ background: '#eef7ff', color: 'var(--ink)' }}>📝 {log.notes}</p>
+                                    )}
+
                                     {/* Mission details (summary, dates, countries, team, counts) */}
                                     {(() => {
                                       const rows = details.filter(t => !(t.question||'').startsWith('Status:'));
