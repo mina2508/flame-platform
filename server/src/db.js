@@ -14,3 +14,11 @@ export const prisma =
 // Cache in all environments. On Vercel the warm container reuses this instance,
 // so we avoid re-opening the DB connection pool on every function invocation.
 globalForPrisma.__flamePrisma = prisma;
+
+// Warm up the connection on cold start. Firing a trivial query at module load
+// kicks off the TLS handshake + Neon wake-up in the background so it overlaps
+// with request parsing/auth, shaving time off the first real query.
+if (!globalForPrisma.__flameWarmed) {
+  globalForPrisma.__flameWarmed = true;
+  prisma.$queryRaw`SELECT 1`.catch(() => {});
+}

@@ -14,9 +14,20 @@ export async function buildSummary({ from, to, schoolId, typeId, status }) {
   if (schoolId) where.schoolId = schoolId;
   if (typeId) where.logTypeId = typeId;
 
-  const logs = await prisma.missionLog.findMany({ where, include: { tasks: true } });
-  const schools = await prisma.school.findMany();
-  const logTypes = await prisma.logType.findMany();
+  // Only select the fields the summary actually needs (not full task objects) and
+  // run the three reads in parallel — much less data + fewer round-trips.
+  const [logs, schools, logTypes] = await Promise.all([
+    prisma.missionLog.findMany({
+      where,
+      select: {
+        id: true, schoolId: true, logTypeId: true, logDate: true, status: true,
+        responsiblePersonId: true, notes: true,
+        tasks: { select: { performed: true } },
+      },
+    }),
+    prisma.school.findMany({ select: { id: true, name: true } }),
+    prisma.logType.findMany({ select: { id: true, label: true, icon: true } }),
+  ]);
 
   // Each log row is a per-school unit (used for school/category breakdowns).
   // A mission that visits N schools produces N units — that is correct: it shows

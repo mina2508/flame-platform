@@ -329,6 +329,11 @@ model MissionLog {
   createdBy            User?    @relation(fields: [createdById], references: [id])
   createdAt            DateTime @default(now())
   tasks TaskRecord[]
+
+  // Indexes speed up the dashboard/log queries that filter by date/school/type.
+  @@index([logDate])
+  @@index([schoolId])
+  @@index([logTypeId])
 }
 
 model TaskRecord {
@@ -339,6 +344,8 @@ model TaskRecord {
   performed     Boolean    @default(false)
   responsible   String?
   recordedDate  DateTime?
+
+  @@index([missionLogId])
 }
 
 // ─────────────────────────── Content ───────────────────────────
