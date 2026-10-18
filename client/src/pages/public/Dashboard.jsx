@@ -209,9 +209,9 @@ export default function Dashboard() {
         <>
           {/* KPI Strip */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <KpiCard icon="🎯" value={data.kpis.totalMissions} label="Total Activities" note="Logged activities in the period" accent="rgba(240,74,24,0.10)" />
-            <KpiCard icon="🏫" value={data.kpis.activeSchools} label="Active Schools" note="Schools with activity in the period" accent="rgba(52,169,214,0.12)" />
-            <KpiCard icon="✅" value={data.kpis.completed} label="Completed" note="Activities fully completed" accent="rgba(39,149,106,0.12)" />
+            <KpiCard icon="🎯" value={data.kpis.totalMissions} label="Total Missions" note="Distinct missions in the period" accent="rgba(240,74,24,0.10)" />
+            <KpiCard icon="🏫" value={data.kpis.activeSchools} label="Active Schools" note="Schools visited by a mission" accent="rgba(52,169,214,0.12)" />
+            <KpiCard icon="✅" value={data.kpis.completed} label="Completed" note="Missions fully completed" accent="rgba(39,149,106,0.12)" />
             <KpiCard icon="🕓" value={data.kpis.expected} label="Expected" note="Not started yet" accent="rgba(52,169,214,0.10)" />
             <KpiCard icon="🔄" value={data.kpis.pending} label="Pending" note="Started but not completed" accent="rgba(198,150,33,0.14)" />
           </div>

@@ -41,6 +41,10 @@ export async function buildSummary({ from, to, schoolId, typeId, status }) {
     const state = stateOf(l);
     return { ...l, state, completed: state === 'completed', missionId: missionIdFromNotes(l.notes) };
   });
+  // Dashboard is MISSIONS-ONLY: keep just the logs generated from a real Mission
+  // (tagged `mission:<id>`). Orphan/legacy school logs are excluded everywhere so
+  // every count (KPIs, per-school table, categories) matches the Missions tab.
+  units = units.filter(u => u.missionId);
   if (status === 'completed') units = units.filter(m => m.state === 'completed');
   if (status === 'pending') units = units.filter(m => m.state === 'pending');
   if (status === 'expected') units = units.filter(m => m.state === 'expected');
