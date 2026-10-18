@@ -51,3 +51,35 @@ api.interceptors.response.use((response) => {
   if (error.config?.__counted) done();
   return Promise.reject(error);
 });
+
+// ──────────────────────────────────────────────────────────────
+// Lightweight GET cache with in-flight dedup.
+// Use `cachedGet(url, { ttl })` for reference lists that rarely change
+// (schools, countries, people, log-types). Returns the parsed data.
+// Any POST/PUT/PATCH/DELETE automatically clears the cache so the next
+// read is fresh. This removes the dozens of redundant list refetches
+// that happen as the user moves between admin sections.
+// ──────────────────────────────────────────────────────────────
+const _cache = new Map();   // key -> { at, data }
+const _inflight = new Map(); // key -> Promise
+
+export function clearApiCache() { _cache.clear(); _inflight.clear(); }
+
+export async function cachedGet(url, { ttl = 30000, params } = {}) {
+  const key = url + (params ? '?' + new URLSearchParams(params).toString() : '');
+  const hit = _cache.get(key);
+  if (hit && Date.now() - hit.at < ttl) return hit.data;
+  if (_inflight.has(key)) return _inflight.get(key);
+  const p = api.get(url, { params })
+    .then((r) => { _cache.set(key, { at: Date.now(), data: r.data }); _inflight.delete(key); return r.data; })
+    .catch((e) => { _inflight.delete(key); throw e; });
+  _inflight.set(key, p);
+  return p;
+}
+
+// Invalidate the cache on any write so lists stay correct after edits.
+api.interceptors.request.use((config) => {
+  const m = (config.method || 'get').toLowerCase();
+  if (m !== 'get') clearApiCache();
+  return config;
+});

@@ -22,12 +22,17 @@ export default function MissionsAdmin() {
   const [medicalMemberIds, setMedicalMemberIds] = useState([]);
 
   async function load() {
+    // Missions list always fresh; reference lists come from the short-TTL cache
+    // (and people in light mode) — all fetched in parallel.
     const q = typeFilter ? `?type=${typeFilter}` : '';
-    setMissions((await api.get('/missions' + q)).data);
-    setCountries((await api.get('/countries')).data);
-    setSchools((await api.get('/schools')).data);
-    setPeople((await api.get('/people')).data);
-    setMedics((await api.get('/medical-team')).data);
+    const [m, c, s, p, md] = await Promise.all([
+      api.get('/missions' + q).then(r => r.data),
+      cachedGet('/countries'),
+      cachedGet('/schools'),
+      cachedGet('/people?light=1'),
+      cachedGet('/medical-team'),
+    ]);
+    setMissions(m); setCountries(c); setSchools(s); setPeople(p); setMedics(md);
   }
   useEffect(() => { load(); }, [typeFilter]);
 

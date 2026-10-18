@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { api, cachedGet } from '../../api/client.js';
 
-function DocManager({ title, endpoint, maxMB = 12 }) {
+function DocManager({ title, endpoint, maxMB = 12, schools, classes }) {
   const [items, setItems] = useState([]);
-  const [schools, setSchools] = useState([]);
-  const [classes, setClasses] = useState([]);
   const [form, setForm] = useState({ title: '', description: '', language: 'en' });
   const [file, setFile] = useState(null);
   const [schoolIds, setSchoolIds] = useState([]);
@@ -12,9 +10,8 @@ function DocManager({ title, endpoint, maxMB = 12 }) {
   const [busy, setBusy] = useState(false);
 
   async function load() {
+    // Only the item list is per-manager; schools/classes are shared (passed in).
     setItems((await api.get(endpoint)).data);
-    setSchools((await api.get('/schools')).data);
-    setClasses((await api.get('/classes')).data);
   }
   useEffect(() => { load(); }, []);
 
@@ -166,11 +163,19 @@ function DocManager({ title, endpoint, maxMB = 12 }) {
 }
 
 export default function DocumentsAdmin() {
+  const [schools, setSchools] = useState([]);
+  const [classes, setClasses] = useState([]);
+  useEffect(() => {
+    // Fetch the shared lists once (cached) instead of 3× per DocManager.
+    Promise.all([cachedGet('/schools'), cachedGet('/classes')])
+      .then(([s, c]) => { setSchools(s); setClasses(c); })
+      .catch(() => {});
+  }, []);
   return (
     <div className="space-y-4">
-      <DocManager title="Curriculum" endpoint="/curriculum-docs" maxMB={12} />
-      <DocManager title="Values Classes" endpoint="/values-classes" maxMB={12} />
-      <DocManager title="Formation" endpoint="/formation" maxMB={12} />
+      <DocManager title="Curriculum" endpoint="/curriculum-docs" maxMB={12} schools={schools} classes={classes} />
+      <DocManager title="Values Classes" endpoint="/values-classes" maxMB={12} schools={schools} classes={classes} />
+      <DocManager title="Formation" endpoint="/formation" maxMB={12} schools={schools} classes={classes} />
     </div>
   );
 }

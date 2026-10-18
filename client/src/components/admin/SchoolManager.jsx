@@ -131,12 +131,17 @@ function SchoolDetail({ school }) {
   const [valuesClasses, setValuesClasses] = useState([]);
 
   async function load() {
-    setClasses((await api.get(`/classes?schoolId=${school.id}`)).data);
-    setBoard((await api.get(`/schools/${school.id}/tasks`)).data);
-    setSchoolLogTypes((await api.get('/logs/types/school')).data);
-    setSchoolPeople((await api.get(`/people?schoolId=${school.id}`)).data);
-    setAllPeople((await api.get('/people')).data);
-    setValuesClasses((await api.get('/values-classes')).data);
+    // All six reads in parallel; people in light mode (dropdowns only need names).
+    const [cls, brd, slt, sp, ap, vc] = await Promise.all([
+      api.get(`/classes?schoolId=${school.id}`).then(r => r.data),
+      api.get(`/schools/${school.id}/tasks`).then(r => r.data),
+      cachedGet('/logs/types/school'),
+      api.get(`/people?schoolId=${school.id}&light=1`).then(r => r.data),
+      cachedGet('/people?light=1'),
+      cachedGet('/values-classes'),
+    ]);
+    setClasses(cls); setBoard(brd); setSchoolLogTypes(slt);
+    setSchoolPeople(sp); setAllPeople(ap); setValuesClasses(vc);
   }
   useEffect(() => { load(); }, []);
 

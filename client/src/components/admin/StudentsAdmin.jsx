@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { api, cachedGet } from '../../api/client.js';
 import DateField from '../DateField.jsx';
 
 export default function StudentsAdmin() {
@@ -14,8 +14,8 @@ export default function StudentsAdmin() {
   const [f, setF] = useState({ fullName: '', birthday: '', phone: '', classId: '', fatherName: '', fatherContact: '', motherName: '', motherContact: '' });
 
   async function loadBase() {
-    setSchools((await api.get('/schools')).data);
-    setCountries((await api.get('/countries')).data);
+    const [s, c] = await Promise.all([cachedGet('/schools'), cachedGet('/countries')]);
+    setSchools(s); setCountries(c);
   }
   useEffect(() => { loadBase(); }, []);
 

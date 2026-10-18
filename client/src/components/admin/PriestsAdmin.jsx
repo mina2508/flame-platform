@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { api, cachedGet } from '../../api/client.js';
 
 export default function PriestsAdmin() {
   const [priests, setPriests] = useState([]);
@@ -10,8 +10,8 @@ export default function PriestsAdmin() {
   const [fCountry, setFCountry] = useState('');
 
   async function loadBase() {
-    setCountries((await api.get('/countries')).data);
-    setSchools((await api.get('/schools')).data);
+    const [c, s] = await Promise.all([cachedGet('/countries'), cachedGet('/schools')]);
+    setCountries(c); setSchools(s);
   }
   async function loadPriests(country = fCountry) {
     const params = new URLSearchParams({ isPriest: 'true' });

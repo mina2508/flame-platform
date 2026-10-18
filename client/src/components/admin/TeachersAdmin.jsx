@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { api, cachedGet } from '../../api/client.js';
 import DateField from '../DateField.jsx';
 
 export default function TeachersAdmin() {
@@ -15,8 +15,8 @@ export default function TeachersAdmin() {
   const today = new Date().toISOString().slice(0, 10);
 
   async function loadBase() {
-    setCountries((await api.get('/countries')).data);
-    setSchools((await api.get('/schools')).data);
+    const [c, s] = await Promise.all([cachedGet('/countries'), cachedGet('/schools')]);
+    setCountries(c); setSchools(s);
   }
   useEffect(() => { loadBase(); }, []);
 

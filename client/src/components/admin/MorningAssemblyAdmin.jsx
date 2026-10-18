@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { api, cachedGet } from '../../api/client.js';
 import DateField from '../DateField.jsx';
 
 const SECTIONS = [
@@ -19,8 +19,11 @@ export default function MorningAssemblyAdmin() {
   const [files, setFiles] = useState({});
 
   async function load() {
-    setItems((await api.get('/morning-assembly')).data);
-    setSchools((await api.get('/schools')).data);
+    const [items, schools] = await Promise.all([
+      api.get('/morning-assembly').then(r => r.data),
+      cachedGet('/schools'),
+    ]);
+    setItems(items); setSchools(schools);
   }
   useEffect(() => { load(); }, []);
 

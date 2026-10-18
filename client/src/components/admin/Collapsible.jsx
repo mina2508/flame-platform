@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../api/client.js';
+import { cachedGet } from '../../api/client.js';
 
 // Collapsible section wrapper matching the CrudSection look.
 // - Uncontrolled by default (manages its own open state).
@@ -15,8 +15,12 @@ export default function Collapsible({ title, count, countEndpoint, children, def
   useEffect(() => {
     if (!countEndpoint) return;
     let cancelled = false;
-    api.get(countEndpoint)
-      .then(r => { if (!cancelled) setFetchedCount(Array.isArray(r.data) ? r.data.length : (r.data?.total ?? null)); })
+    // Count badges only need the length — use the cache + light people mode.
+    const url = countEndpoint.includes('/people')
+      ? countEndpoint + (countEndpoint.includes('?') ? '&' : '?') + 'light=1'
+      : countEndpoint;
+    cachedGet(url, { ttl: 30000 })
+      .then(data => { if (!cancelled) setFetchedCount(Array.isArray(data) ? data.length : (data?.total ?? null)); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [countEndpoint]);

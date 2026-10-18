@@ -36,6 +36,17 @@ router.get('/', async (req, res, next) => {
         { priestCountryId: req.query.countryId },
       ];
     }
+    // Lightweight mode for dropdowns/pickers: only the fields the UI needs.
+    // Avoids shipping the full nested person graph (school→country, classes, etc.)
+    // which most callers never use.
+    if (req.query.light === '1') {
+      const people = await prisma.person.findMany({
+        where,
+        select: { id: true, fullName: true, available: true, position: true, isPriest: true, schoolId: true, priestCountryId: true },
+        orderBy: { fullName: 'asc' },
+      });
+      return res.json(people);
+    }
     const people = await prisma.person.findMany({
       where,
       include: {
