@@ -46,13 +46,13 @@ export async function buildSummary({ from, to, schoolId, typeId, status }) {
   if (status === 'expected') units = units.filter(m => m.state === 'expected');
   const missions = units; // alias kept for the breakdowns below
 
-  // Count DISTINCT real missions. Logs with a mission id collapse to one;
-  // legacy logs (no mission id) fall back to a per-row synthetic key.
-  const distinctMissionKeys = new Set(units.map(u =>
-    u.missionId
-      ? `M:${u.missionId}`
-      : `L:${u.responsiblePersonId}|${u.schoolId}|${u.logDate.toISOString().slice(0,10)}|${u.logTypeId}`
-  ));
+  // Count DISTINCT real missions ONLY. A "mission" is a log generated from a real
+  // Mission record (tagged `mission:<id>` in notes). Orphan/legacy logs with no
+  // mission tag are school activity, NOT missions, so they are excluded from the
+  // mission KPIs — this keeps the dashboard in sync with the Missions tab.
+  const distinctMissionKeys = new Set(
+    units.filter(u => u.missionId).map(u => `M:${u.missionId}`)
+  );
 
   const bySchool = schools
     .filter(s => !schoolId || s.id === schoolId)
@@ -84,12 +84,13 @@ export async function buildSummary({ from, to, schoolId, typeId, status }) {
     };
   }).filter(c => c.total > 0);
 
-  // Distinct real missions and their completion (all units of a mission must be completed).
+  // Distinct real missions and their completion (all school-units of a mission
+  // must be completed for the mission to count as completed). Only mission-tagged
+  // logs participate — orphan logs are excluded.
   const missionGroups = new Map();
   for (const u of units) {
-    const key = u.missionId
-      ? `M:${u.missionId}`
-      : `L:${u.responsiblePersonId}|${u.schoolId}|${u.logDate.toISOString().slice(0,10)}|${u.logTypeId}`;
+    if (!u.missionId) continue;
+    const key = `M:${u.missionId}`;
     if (!missionGroups.has(key)) missionGroups.set(key, []);
     missionGroups.get(key).push(u);
   }

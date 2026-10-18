@@ -55,7 +55,9 @@ export default function MissionsAdmin() {
   }
   async function remove(id) { if (confirm('Delete mission?')) { await api.delete(`/missions/${id}`); load(); } }
 
-  function startEdit(m) {
+  const [schoolRows, setSchoolRows] = useState([]); // per-school [{schoolId, name, status, note}]
+
+  async function startEdit(m) {
     setEditing({
       id: m.id,
       status: m.status || 'expected',
@@ -63,12 +65,31 @@ export default function MissionsAdmin() {
       endDate: m.endDate ? m.endDate.slice(0, 10) : '',
       summary: m.summary || '',
     });
+    setSchoolRows([]);
+    // Load the full mission to get per-school status/notes.
+    try {
+      const full = (await api.get(`/missions/${m.id}`)).data;
+      setSchoolRows((full.schools || []).map(s => ({
+        schoolId: s.schoolId,
+        name: s.school?.name || s.schoolId,
+        status: s.status || 'expected',
+        note: s.note || '',
+      })));
+    } catch {}
   }
   async function saveEdit() {
     const { id, ...data } = editing;
     await api.patch(`/missions/${id}`, data);
     setEditing(null);
     load();
+  }
+  // Save one school's status/note (per-school override).
+  async function saveSchoolRow(missionId, row) {
+    await api.patch(`/missions/${missionId}/school/${row.schoolId}`, { status: row.status, note: row.note });
+    load();
+  }
+  function updateSchoolRow(i, k, v) {
+    const rows = [...schoolRows]; rows[i][k] = v; setSchoolRows(rows);
   }
 
   const inp = "border rounded-xl px-3 py-2 text-sm";
@@ -213,10 +234,34 @@ export default function MissionsAdmin() {
                   <DateField value={editing.endDate} onChange={v => setEditing({ ...editing, endDate: v })} min={editing.startDate} placeholder="End date" />
                 </div>
                 <textarea value={editing.summary} onChange={e => setEditing({ ...editing, summary: e.target.value })} className={inp} rows={2} style={{ borderColor: 'var(--line)' }} placeholder="Summary" />
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                  Saving the mission status above applies it to <strong>every school</strong>. To track schools separately, set each school’s own status / note below.
+                </p>
                 <div className="flex gap-2">
-                  <button onClick={saveEdit} className="pill-btn pill-btn-primary text-xs">Save</button>
+                  <button onClick={saveEdit} className="pill-btn pill-btn-primary text-xs">Save mission (all schools)</button>
                   <button onClick={() => setEditing(null)} className="pill-btn text-xs">Cancel</button>
                 </div>
+
+                {/* Per-school status + note */}
+                {schoolRows.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-xs font-black uppercase block mb-1" style={{ color: 'var(--muted)' }}>Per-school status &amp; notes</span>
+                    <div className="grid gap-2">
+                      {schoolRows.map((row, i) => (
+                        <div key={row.schoolId} className="rounded-lg border p-2 bg-white grid gap-1.5" style={{ borderColor: 'var(--line)' }}>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <strong className="text-xs text-ink flex-1 min-w-[120px]">🏫 {row.name}</strong>
+                            <select value={row.status} onChange={e => updateSchoolRow(i, 'status', e.target.value)} className="border rounded-lg px-2 py-1 text-xs" style={{ borderColor: 'var(--line)' }}>
+                              {MISSION_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                            </select>
+                            <button onClick={() => saveSchoolRow(editing.id, row)} className="text-xs font-bold" style={{ color: 'var(--good)', border: 'none', background: 'none', cursor: 'pointer' }}>Save</button>
+                          </div>
+                          <textarea value={row.note} onChange={e => updateSchoolRow(i, 'note', e.target.value)} className="border rounded-lg px-2 py-1 text-xs" rows={2} placeholder="What happened at this school…" style={{ borderColor: 'var(--line)' }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -89,7 +89,7 @@ router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res,
           startDate: c.startDate ? new Date(c.startDate) : null,
           endDate: c.endDate ? new Date(c.endDate) : null,
         })) },
-        schools: { create: schoolIds.map(id => ({ schoolId: id })) },
+        schools: { create: schoolIds.map(id => ({ schoolId: id, status })) },
         people: { create: personIds.map(id => ({ personId: id })) },
         medicalTeam: { create: medicalMemberIds.map(id => ({ memberId: id })) },
       },
@@ -186,6 +186,13 @@ router.patch('/:id', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, 
         data: logUpdate,
       }).catch(() => {});
     }
+    // Setting the mission-level status applies it to every school (overrides per-school).
+    if (status !== undefined) {
+      await prisma.missionSchool.updateMany({
+        where: { missionId: mission.id },
+        data: { status },
+      }).catch(() => {});
+    }
 
     // Member availability follows mission status: pending (in progress) → busy, otherwise available
     const personIds = mission.people.map(p => p.personId);
@@ -197,6 +204,37 @@ router.patch('/:id', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, 
     }
 
     res.json(mission);
+  } catch (e) { next(e); }
+});
+
+// Set the per-school status and/or note for one school within a mission.
+// Keeps the generated dashboard missionLog for that school in sync.
+router.patch('/:id/school/:schoolId', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res, next) => {
+  try {
+    const { id: missionId, schoolId } = req.params;
+    const { status, note } = req.body;
+
+    const data = {};
+    if (status !== undefined) data.status = status;
+    if (note !== undefined) data.note = note;
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Nothing to update' });
+
+    const updated = await prisma.missionSchool.update({
+      where: { missionId_schoolId: { missionId, schoolId } },
+      data,
+    });
+
+    // Sync the matching dashboard log (one per mission+school).
+    const logData = {};
+    if (status !== undefined) logData.status = status;
+    if (Object.keys(logData).length) {
+      await prisma.missionLog.updateMany({
+        where: { schoolId, notes: { contains: `mission:${missionId}` } },
+        data: logData,
+      }).catch(() => {});
+    }
+
+    res.json(updated);
   } catch (e) { next(e); }
 });
 

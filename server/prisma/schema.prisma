@@ -269,6 +269,8 @@ model MissionCountry {
 model MissionSchool {
   missionId String
   schoolId  String
+  status    String  @default("expected") // expected | pending | completed (per-school)
+  note      String?                       // per-school note / what happened at this school
   mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
   school    School  @relation(fields: [schoolId], references: [id])
   @@id([missionId, schoolId])
