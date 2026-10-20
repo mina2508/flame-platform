@@ -49,7 +49,7 @@ router.get('/:id/tasks', async (req, res, next) => {
       curriculum: curr.map(c => ({ kind: 'curriculum', id: c.curriculum.id, title: c.curriculum.title, status: c.status })),
       values: values.map(v => ({ kind: 'values', id: v.valuesClass.id, title: v.valuesClass.title, status: v.status })),
       formation: formation.map(f => ({ kind: 'formation', id: f.formation.id, title: f.formation.title, status: f.status })),
-      logs: logs.map(l => ({ kind: 'log', id: l.id, title: l.logType?.label || l.logTypeId, logDate: l.logDate, status: normLogStatus(l), notes: l.notes })),
+      logs: logs.map(l => ({ kind: 'log', id: l.id, title: l.logType?.label || l.logTypeId, logDate: l.logDate, status: normLogStatus(l), notes: l.notes, showOnDashboard: l.showOnDashboard })),
     });
   } catch (e) { next(e); }
 });

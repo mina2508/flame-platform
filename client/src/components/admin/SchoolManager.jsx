@@ -120,8 +120,8 @@ function SchoolDetail({ school }) {
   const [studentFor, setStudentFor] = useState(null);
   const [board, setBoard] = useState(null);
   const [schoolLogTypes, setSchoolLogTypes] = useState([]);
-  const [logForm, setLogForm] = useState({ logTypeId: 'medical_log', summary: '', logDate: '', status: 'expected', valuesClassId: '' });
-  const [editingLog, setEditingLog] = useState(null); // { id, logTypeId, summary, logDate, status }
+  const [logForm, setLogForm] = useState({ logTypeId: 'medical_log', summary: '', logDate: '', status: 'expected', valuesClassId: '', showOnDashboard: true });
+  const [editingLog, setEditingLog] = useState(null); // { id, logTypeId, summary, logDate, status, showOnDashboard }
   const [schoolPeople, setSchoolPeople] = useState([]);
   const [allPeople, setAllPeople] = useState([]);
   const [assignPersonId, setAssignPersonId] = useState('');
@@ -185,9 +185,9 @@ function SchoolDetail({ school }) {
 
     await api.post('/logs', {
       logTypeId: logForm.logTypeId, summary, logDate: logForm.logDate,
-      status: logForm.status, schoolId: school.id,
+      status: logForm.status, schoolId: school.id, showOnDashboard: logForm.showOnDashboard,
     });
-    setLogForm({ logTypeId: 'medical_log', summary: '', logDate: '', status: 'expected', valuesClassId: '' });
+    setLogForm({ logTypeId: 'medical_log', summary: '', logDate: '', status: 'expected', valuesClassId: '', showOnDashboard: true });
     load();
   }
   async function saveLogEdit() {
@@ -259,6 +259,10 @@ function SchoolDetail({ school }) {
             </select>
           </div>
           <textarea value={editingLog.summary} onChange={e => setEditingLog({ ...editingLog, summary: e.target.value })} className={inpSm} rows={2} placeholder="Summary *" style={{ borderColor: 'var(--line)' }} />
+          <label className="flex items-center gap-2 cursor-pointer" style={{ color: 'var(--muted)' }}>
+            <input type="checkbox" checked={editingLog.showOnDashboard !== false} onChange={e => setEditingLog({ ...editingLog, showOnDashboard: e.target.checked })} />
+            Show on dashboard
+          </label>
           <div className="flex gap-2">
             <button onClick={saveLogEdit} className="pill-btn pill-btn-primary text-xs">Save</button>
             <button onClick={() => setEditingLog(null)} className="pill-btn text-xs">Cancel</button>
@@ -273,9 +277,10 @@ function SchoolDetail({ school }) {
             <span className={`badge ${STATUS_COLOR[item.status]} mr-2`}>{STATUS_LABEL[item.status] || item.status}</span>
             <strong>{item.title}</strong>
             {item.logDate && <span className="ml-1" style={{ color: 'var(--muted)' }}>· {String(item.logDate).slice(0, 10)}</span>}
+            {item.showOnDashboard === false && <span className="ml-2" title="Hidden from dashboard" style={{ color: 'var(--muted)' }}>🚫📊</span>}
           </span>
           <div className="flex gap-2">
-            <button onClick={() => setEditingLog({ id: item.id, logTypeId: schoolLogTypes.find(t => t.label === item.title)?.id || 'task', summary: item.notes || '', logDate: String(item.logDate || '').slice(0, 10), status: item.status })} className="font-bold" style={{ color: 'var(--sky)', border: 'none', background: 'none', cursor: 'pointer' }}>Edit</button>
+            <button onClick={() => setEditingLog({ id: item.id, logTypeId: schoolLogTypes.find(t => t.label === item.title)?.id || 'task', summary: item.notes || '', logDate: String(item.logDate || '').slice(0, 10), status: item.status, showOnDashboard: item.showOnDashboard !== false })} className="font-bold" style={{ color: 'var(--sky)', border: 'none', background: 'none', cursor: 'pointer' }}>Edit</button>
             <button onClick={() => deleteLog(item.id)} className="font-bold" style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
           </div>
         </div>
@@ -309,6 +314,10 @@ function SchoolDetail({ school }) {
             </select>
           )}
           <textarea placeholder="Summary * (what happened / what to do)" value={logForm.summary} onChange={e => setLogForm({ ...logForm, summary: e.target.value })} className={inpSm} rows={2} style={{ borderColor: 'var(--line)' }} required />
+          <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: 'var(--muted)' }}>
+            <input type="checkbox" checked={logForm.showOnDashboard} onChange={e => setLogForm({ ...logForm, showOnDashboard: e.target.checked })} />
+            Show on dashboard
+          </label>
           <button className="pill-btn pill-btn-primary text-sm justify-self-start">+ Add Entry</button>
         </form>
       </div>

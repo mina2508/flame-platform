@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { CAN_EDIT_CONTENT } from '../permissions.js';
-import { uploadLarge, fileUrl } from '../middleware/upload.js';
+import { uploadLarge, toStorage, fileUrl } from '../middleware/upload.js';
 
 // ─── Curriculum (PDF ≤12MB, assignable to many classes & schools) ───
 export const curriculumRouter = Router();
@@ -21,7 +21,7 @@ curriculumRouter.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-curriculumRouter.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadLarge.single('file'), async (req, res, next) => {
+curriculumRouter.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadLarge.single('file'), toStorage, async (req, res, next) => {
   try {
     const { title, description, language, classIds, schoolIds } = req.body;
     const cur = await prisma.curriculum.create({
@@ -99,7 +99,7 @@ valuesRouter.get('/', async (_, res, next) => {
   } catch (e) { next(e); }
 });
 
-valuesRouter.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadLarge.single('file'), async (req, res, next) => {
+valuesRouter.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadLarge.single('file'), toStorage, async (req, res, next) => {
   try {
     const { title, description, language, classIds, schoolIds } = req.body;
     const v = await prisma.valuesClass.create({
@@ -173,7 +173,7 @@ formationRouter.get('/', async (_, res, next) => {
   } catch (e) { next(e); }
 });
 
-formationRouter.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadLarge.single('file'), async (req, res, next) => {
+formationRouter.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadLarge.single('file'), toStorage, async (req, res, next) => {
   try {
     const { title, description, schoolIds } = req.body;
     const f = await prisma.formation.create({

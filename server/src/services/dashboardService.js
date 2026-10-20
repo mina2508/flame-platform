@@ -10,7 +10,7 @@ export async function buildSummary({ from, to, schoolId, typeId, status }) {
   const endInclusive = new Date(end);
   endInclusive.setHours(23, 59, 59, 999);
 
-  const where = { logDate: { gte: new Date(start), lte: endInclusive } };
+  const where = { logDate: { gte: new Date(start), lte: endInclusive }, showOnDashboard: true };
   if (schoolId) where.schoolId = schoolId;
   if (typeId) where.logTypeId = typeId;
 

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { CAN_EDIT_CONTENT } from '../permissions.js';
-import { uploadSmall, fileUrl } from '../middleware/upload.js';
+import { uploadSmall, toStorageFields, fileUrl } from '../middleware/upload.js';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // Each section accepts text (body field) OR a file (≤2MB, field named <section>File)
-router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadSmall.fields(fileFields), async (req, res, next) => {
+router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), uploadSmall.fields(fileFields), toStorageFields, async (req, res, next) => {
   try {
     const data = { schoolId: req.body.schoolId || null, date: req.body.date ? new Date(req.body.date) : new Date() };
     for (const s of SECTIONS) {

@@ -61,7 +61,7 @@ router.get('/:id', async (req, res, next) => {
 // Summary and date are mandatory.
 router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res, next) => {
   try {
-    const { tasks, summary, logTypeId, schoolId, logDate, status = 'expected', responsiblePersonId } = req.body;
+    const { tasks, summary, logTypeId, schoolId, logDate, status = 'expected', responsiblePersonId, showOnDashboard } = req.body;
 
     if (!schoolId) return res.status(400).json({ error: 'School is required' });
     if (!logTypeId) return res.status(400).json({ error: 'Type is required' });
@@ -79,6 +79,7 @@ router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res,
         logTypeId, schoolId, status,
         logDate: new Date(logDate),
         responsiblePersonId: responsiblePersonId || null,
+        showOnDashboard: showOnDashboard === undefined ? true : !!showOnDashboard,
         notes: summary,
         createdById: req.user.id,
         tasks: { create: taskList },
@@ -92,11 +93,12 @@ router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res,
 // Edit a school-level log/task.
 router.patch('/:id', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res, next) => {
   try {
-    const { summary, logDate, status, logTypeId, responsiblePersonId } = req.body;
+    const { summary, logDate, status, logTypeId, responsiblePersonId, showOnDashboard } = req.body;
     const data = {};
     if (logTypeId !== undefined) data.logTypeId = logTypeId;
     if (status !== undefined) data.status = status;
     if (responsiblePersonId !== undefined) data.responsiblePersonId = responsiblePersonId || null;
+    if (showOnDashboard !== undefined) data.showOnDashboard = !!showOnDashboard;
     if (logDate !== undefined && logDate) data.logDate = new Date(logDate);
     if (summary !== undefined) data.notes = summary;
 
