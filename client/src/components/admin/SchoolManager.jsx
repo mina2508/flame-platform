@@ -1,8 +1,20 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client.js';
+import { api, cachedGet } from '../../api/client.js';
 import PersonPicker from './PersonPicker.jsx';
 import DateField from '../DateField.jsx';
 import LocationPicker from './LocationPicker.jsx';
+
+// Known school log types — mirrors the server's /logs/types/school response.
+// Used as a safety fallback so the "Add Log / Task" dropdown is never empty
+// even if that fetch is slow or momentarily fails.
+const FALLBACK_LOG_TYPES = [
+  { id: 'medical_log', label: 'Medical Log', icon: '🏥' },
+  { id: 'principals_visit', label: 'Principals Visit', icon: '🏫' },
+  { id: 'follow_up', label: 'Follow Up', icon: '✚' },
+  { id: 'activities', label: 'Activities', icon: '🎉' },
+  { id: 'values_class', label: 'Values Class', icon: '❤' },
+  { id: 'task', label: 'Task', icon: '📋' },
+];
 
 export default function SchoolManager({ open: openProp, onToggle }) {
   const [schools, setSchools] = useState([]);
@@ -132,7 +144,9 @@ function SchoolDetail({ school }) {
 
   async function load() {
     // All six reads in parallel; people in light mode (dropdowns only need names).
-    const [cls, brd, slt, sp, ap, vc] = await Promise.all([
+    // Each read is independent — one slow/failing call must NOT blank the rest.
+    // (A single rejected promise in Promise.all would leave every dropdown empty.)
+    const [cls, brd, slt, sp, ap, vc] = await Promise.allSettled([
       api.get(`/classes?schoolId=${school.id}`).then(r => r.data),
       api.get(`/schools/${school.id}/tasks`).then(r => r.data),
       cachedGet('/logs/types/school'),
@@ -140,8 +154,14 @@ function SchoolDetail({ school }) {
       cachedGet('/people?light=1'),
       cachedGet('/values-classes'),
     ]);
-    setClasses(cls); setBoard(brd); setSchoolLogTypes(slt);
-    setSchoolPeople(sp); setAllPeople(ap); setValuesClasses(vc);
+    const val = (r, fallback) => (r.status === 'fulfilled' && r.value ? r.value : fallback);
+    setClasses(val(cls, []));
+    setBoard(val(brd, null));
+    // Never let the log-type dropdown be empty — fall back to the known set.
+    setSchoolLogTypes(val(slt, FALLBACK_LOG_TYPES));
+    setSchoolPeople(val(sp, []));
+    setAllPeople(val(ap, []));
+    setValuesClasses(val(vc, []));
   }
   useEffect(() => { load(); }, []);
 
