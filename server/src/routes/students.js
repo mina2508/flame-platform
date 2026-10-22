@@ -38,7 +38,11 @@ router.post('/', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res,
 router.patch('/:id', requireAuth, requireRole(...CAN_EDIT_CONTENT), async (req, res, next) => {
   try {
     const d = { ...req.body };
-    if (d.birthday) d.birthday = new Date(d.birthday);
+    // Reject future birthdays on edit too (POST already guards this).
+    if (d.birthday) {
+      d.birthday = new Date(d.birthday);
+      if (d.birthday > new Date()) { const e = new Error('Birthday cannot be in the future'); e.status = 400; throw e; }
+    }
     res.json(await prisma.student.update({ where: { id: req.params.id }, data: d }));
   } catch (e) { next(e); }
 });
