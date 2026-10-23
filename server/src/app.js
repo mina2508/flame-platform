@@ -57,17 +57,30 @@ app.use('/api/formation', formationRouter);
 app.use('/api/missions', missionsRouter);
 app.use('/api/morning-assembly', morningAssemblyRouter);
 
-// Health check that also touches the DB so a scheduled ping keeps Neon's
-// compute AWAKE (free tier suspends after ~5 min idle, causing cold-start lag).
-// Point an external cron (cron-job.org / UptimeRobot) at this every 5 minutes.
-app.get('/api/health', async (_, res) => {
-  const t0 = Date.now();
+// Liveness check. Safe to call publicly: takes no input, exposes no data, and
+// never reveals internal error details. Always returns a tiny, fixed shape.
+app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+
+// Keep-alive: touches the DB (SELECT 1) so a scheduled ping keeps Neon's compute
+// AWAKE (free tier suspends after ~5 min idle, causing cold-start lag).
+// Protected by a secret so strangers can't spin up your DB compute:
+//   point your cron at /api/keepalive?key=<HEALTH_PING_KEY>  (every 5 min).
+// If HEALTH_PING_KEY is unset, the DB-touching path is disabled (fails safe).
+app.get('/api/keepalive', async (req, res) => {
+  const secret = process.env.HEALTH_PING_KEY;
+  const provided = req.query.key || req.get('x-ping-key');
+  if (!secret || provided !== secret) {
+    // Do NOT run a DB query for unauthenticated callers (prevents compute abuse)
+    // and do NOT reveal whether a key is configured.
+    return res.status(204).end();
+  }
   try {
     const { prisma } = await import('./db.js');
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', db: 'up', ms: Date.now() - t0 });
-  } catch (e) {
-    res.status(503).json({ status: 'degraded', db: 'down', error: e.message });
+    res.json({ ok: true });
+  } catch {
+    // Never leak the underlying error message/host to the caller.
+    res.status(503).json({ ok: false });
   }
 });
 
