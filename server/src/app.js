@@ -57,7 +57,19 @@ app.use('/api/formation', formationRouter);
 app.use('/api/missions', missionsRouter);
 app.use('/api/morning-assembly', morningAssemblyRouter);
 
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+// Health check that also touches the DB so a scheduled ping keeps Neon's
+// compute AWAKE (free tier suspends after ~5 min idle, causing cold-start lag).
+// Point an external cron (cron-job.org / UptimeRobot) at this every 5 minutes.
+app.get('/api/health', async (_, res) => {
+  const t0 = Date.now();
+  try {
+    const { prisma } = await import('./db.js');
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'up', ms: Date.now() - t0 });
+  } catch (e) {
+    res.status(503).json({ status: 'degraded', db: 'down', error: e.message });
+  }
+});
 
 app.use(errorHandler);
 
