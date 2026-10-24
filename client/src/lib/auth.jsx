@@ -16,11 +16,20 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email, password) {
-    const { data } = await api.post('/auth/login', { email, password });
+  // login accepts a username OR an email (server matches either).
+  async function login(loginId, password) {
+    const { data } = await api.post('/auth/login', { login: loginId, email: loginId, password });
     localStorage.setItem('flame_token', data.token);
     setUser(data.user);
     return data.user;
+  }
+
+  // First-login / self-service password change.
+  async function changePassword(currentPassword, newPassword) {
+    const { data } = await api.post('/auth/change-password', { currentPassword, newPassword });
+    // After a successful change the user is no longer forced to change it.
+    setUser((u) => (u ? { ...u, mustChangePassword: false } : u));
+    return data;
   }
 
   function logout() {
@@ -29,7 +38,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, changePassword, loading }}>
       {children}
     </AuthContext.Provider>
   );
